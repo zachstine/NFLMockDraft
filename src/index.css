@@ -765,3 +765,34 @@ button {
   border: 1px solid var(--next-pick);
   box-shadow: 0 0 8px var(--next-pick-shadow);
 }
+.draft-board-header {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.round-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.round-filter-btn {
+  border: 1px solid var(--border-light);
+  background: var(--selector-bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.round-filter-btn.active,
+.round-filter-btn:hover {
+  background: var(--selector-hover);
+  border-color: var(--accent);
+}
+
+.current-pick-card {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft-strong) inset;
+}
