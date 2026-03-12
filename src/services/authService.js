@@ -2,8 +2,14 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  deleteUser,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  writeBatch,
+} from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 function normalizeUsername(username) {
@@ -15,7 +21,8 @@ function usernameToSyntheticEmail(username) {
 }
 
 export async function signUpWithUsername(username, password) {
-  const normalized = normalizeUsername(username);
+  const cleanedUsername = username.trim();
+  const normalized = normalizeUsername(cleanedUsername);
 
   if (normalized.length < 3) {
     throw new Error('Username must be at least 3 valid characters.');
@@ -28,35 +35,45 @@ export async function signUpWithUsername(username, password) {
     throw new Error('That username is already taken.');
   }
 
-  const syntheticEmail = usernameToSyntheticEmail(username);
-  const credentials = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
+  const syntheticEmail = usernameToSyntheticEmail(cleanedUsername);
 
-  const userRef = doc(db, 'users', credentials.user.uid);
-  const batch = writeBatch(db);
+  let credentials;
+  try {
+    credentials = await createUserWithEmailAndPassword(auth, syntheticEmail, password);
+  } catch (error) {
+    throw new Error(`Auth signup failed: ${error.message}`);
+  }
 
-  batch.set(userRef, {
-    uid: credentials.user.uid,
-    username: username.trim(),
-    usernameLower: normalized,
-    email: syntheticEmail,
-    createdAt: serverTimestamp(),
-  });
+  try {
+    const userRef = doc(db, 'users', credentials.user.uid);
+    const batch = writeBatch(db);
 
-  batch.set(usernameRef, {
-    uid: credentials.user.uid,
-    username: username.trim(),
-    usernameLower: normalized,
-    email: syntheticEmail,
-    createdAt: serverTimestamp(),
-  });
+    const profileData = {
+      uid: credentials.user.uid,
+      username: cleanedUsername,
+      usernameLower: normalized,
+      email: syntheticEmail,
+      createdAt: serverTimestamp(),
+    };
 
-  await batch.commit();
+    batch.set(userRef, profileData);
+    batch.set(usernameRef, profileData);
 
-  return credentials.user;
+    await batch.commit();
+    return credentials.user;
+  } catch (error) {
+    try {
+      await deleteUser(credentials.user);
+    } catch {
+      // ignore cleanup failure
+    }
+    throw new Error(`Profile creation failed: ${error.message}`);
+  }
 }
 
 export async function logInWithUsername(username, password) {
   const normalized = normalizeUsername(username);
+
   if (!normalized) {
     throw new Error('Enter a valid username.');
   }
