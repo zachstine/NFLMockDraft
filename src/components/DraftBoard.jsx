@@ -102,7 +102,7 @@ export default function DraftBoard({
     const targetTopWithinPanel =
       targetRect.top - panelRect.top + panel.scrollTop;
 
-    const desiredViewportPosition = panel.clientHeight * 0.75;
+    const desiredViewportPosition = panel.clientHeight * 0.25;
 
     const targetScrollTop =
       targetTopWithinPanel - desiredViewportPosition + targetRect.height / 2;
