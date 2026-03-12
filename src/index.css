@@ -491,3 +491,81 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.division-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.division-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.division-label {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #cbd5e1;
+  letter-spacing: 0.02em;
+}
+
+.division-team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.team-card.compact {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #121826;
+  border-radius: 14px;
+  padding: 10px 8px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.team-card.compact:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.team-card.compact.active {
+  border-color: #4da3ff;
+  background: rgba(77, 163, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(77, 163, 255, 0.2) inset;
+}
+
+.team-logo.compact {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.team-name.compact {
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.1;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+@media (max-width: 1200px) {
+  .division-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .division-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
