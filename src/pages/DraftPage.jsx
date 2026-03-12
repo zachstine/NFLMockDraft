@@ -12,6 +12,24 @@ import {
 import { draftCapital2026 } from '../data/draftCapital2026';
 import { NFL_TEAMS } from '../data/teams';
 
+const POSITION_ORDER = [
+  'ALL',
+  'QB',
+  'RB',
+  'WR',
+  'TE',
+  'OT',
+  'OG',
+  'C',
+  'EDGE',
+  'DT',
+  'LB',
+  'CB',
+  'S',
+  'K',
+  'P',
+];
+
 function getUpcomingPicks(teamAbbr, currentOverallPick) {
   const allPicks = draftCapital2026[teamAbbr] || [];
   return allPicks.filter((pickNumber) => pickNumber >= currentOverallPick);
@@ -20,6 +38,7 @@ function getUpcomingPicks(teamAbbr, currentOverallPick) {
 export default function DraftPage() {
   const { mockId } = useParams();
   const navigate = useNavigate();
+
   const [mockDraft, setMockDraft] = useState(null);
   const [players, setPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
@@ -28,6 +47,7 @@ export default function DraftPage() {
   const [savingPick, setSavingPick] = useState(false);
   const [autoPicking, setAutoPicking] = useState(false);
   const [error, setError] = useState('');
+  const [selectedRound, setSelectedRound] = useState('ALL');
 
   useEffect(() => {
     const unsubscribe = listenToMockDraft(mockId, (nextMock) => {
@@ -159,27 +179,10 @@ export default function DraftPage() {
   const completedPicks = mockDraft.picks?.length ?? 0;
   const totalPicks = board.length;
   const remainingPicks = Math.max(totalPicks - completedPicks, 0);
-  const POSITION_ORDER = [
-  'ALL',
-  'QB',
-  'RB',
-  'WR',
-  'TE',
-  'OT',
-  'OG',
-  'C',
-  'EDGE',
-  'DT',
-  'LB',
-  'CB',
-  'S',
-  'K',
-  'P',
-];
 
-const positionOptions = POSITION_ORDER.filter(
-  (position) => position === 'ALL' || players.some((player) => player.position === position)
-);
+  const positionOptions = POSITION_ORDER.filter(
+    (position) => position === 'ALL' || players.some((player) => player.position === position)
+  );
 
   const activeTeamAbbr = currentSlot?.team ?? null;
   const activeTeam = NFL_TEAMS.find((team) => team.abbr === activeTeamAbbr) ?? null;
@@ -213,7 +216,13 @@ const positionOptions = POSITION_ORDER.filter(
         </div>
 
         <div className="draft-layout">
-          <DraftBoard board={board} picks={mockDraft.picks ?? []} />
+          <DraftBoard
+            board={board}
+            picks={mockDraft.picks ?? []}
+            currentOverallPick={currentSlot?.overall ?? null}
+            selectedRound={selectedRound}
+            onRoundChange={setSelectedRound}
+          />
 
           <div>
             <div className="panel" style={{ marginBottom: '18px' }}>

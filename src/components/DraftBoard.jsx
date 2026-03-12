@@ -1,6 +1,8 @@
 import { NFL_TEAMS } from '../data/teams';
 import { draftCapital2026 } from '../data/draftCapital2026';
 
+const [selectedRound, setSelectedRound] = useState('ALL');
+
 function getTeamByAbbr(abbr) {
   return NFL_TEAMS.find((team) => team.abbr === abbr) ?? null;
 }
