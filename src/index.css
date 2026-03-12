@@ -890,7 +890,7 @@ img {
 }
 .draft-board-title-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
   min-height: 0;
   line-height: 1;
