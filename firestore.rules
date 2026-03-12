@@ -10,24 +10,29 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    function isDraftOwner() {
+    function draftOwner() {
       return signedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
-    function isCreatingOwnDraft() {
+    function creatingOwnDraft() {
       return signedIn() && request.resource.data.ownerUid == request.auth.uid;
     }
 
-    function isGroupOwner() {
+    function groupOwner() {
       return signedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
-    function isGroupMember() {
-      return signedIn() && request.auth.uid in resource.data.memberUids;
+    function groupMember() {
+      return signedIn() &&
+        resource.data.memberUids is list &&
+        request.auth.uid in resource.data.memberUids;
     }
 
-    function isCreatingOwnGroup() {
-      return signedIn() && request.resource.data.ownerUid == request.auth.uid;
+    function creatingOwnGroup() {
+      return signedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.memberUids is list &&
+        request.auth.uid in request.resource.data.memberUids;
     }
 
     match /users/{userId} {
@@ -36,30 +41,21 @@ service cloud.firestore {
     }
 
     match /drafts/{draftId} {
-      allow create: if isCreatingOwnDraft();
+      allow create: if creatingOwnDraft();
 
-      allow read: if isDraftOwner() || (
-        signedIn() &&
-        resource.data.isPublic == true
-      ) || (
-        signedIn() &&
-        resource.data.groupIds is list &&
-        resource.data.groupIds.size() > 0
-      );
+      allow read: if draftOwner();
 
-      allow update, delete: if isDraftOwner();
+      allow update, delete: if draftOwner();
     }
 
     match /groups/{groupId} {
-      allow create: if isCreatingOwnGroup()
-        && request.resource.data.memberUids is list
-        && request.auth.uid in request.resource.data.memberUids;
+      allow create: if creatingOwnGroup();
 
-      allow read: if isGroupOwner() || isGroupMember();
+      allow read: if groupOwner() || groupMember();
 
-      allow update: if isGroupOwner() || isGroupMember();
+      allow update: if groupOwner() || groupMember();
 
-      allow delete: if isGroupOwner();
+      allow delete: if groupOwner();
     }
   }
 }
