@@ -95,8 +95,14 @@ export default function DraftBoard({
 
     if (!target) return;
 
+    const panelRect = panel.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    const targetTopWithinPanel =
+      targetRect.top - panelRect.top + panel.scrollTop;
+
     const targetScrollTop =
-      target.offsetTop - panel.clientHeight / 2 + target.clientHeight / 2;
+      targetTopWithinPanel - panel.clientHeight / 2 + targetRect.height / 2;
 
     panel.scrollTo({
       top: Math.max(0, targetScrollTop),
