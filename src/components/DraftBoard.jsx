@@ -22,7 +22,7 @@ function PickItem({ slot, pick, isCurrent }) {
     >
       <div className="pick-header">
         <span className="pick-number">#{slot.overall}</span>
-        <span className="team-pill">{team?.name ?? slot.team}</span>
+        <span className="team-pill">{team?.mascot ?? team?.name ?? slot.team}</span>
       </div>
 
       {team?.logo ? (
@@ -82,7 +82,7 @@ export default function DraftBoard({
   const visibleBoard = useMemo(() => {
     return selectedRound === 'ALL'
       ? board
-      : board.filter((slot) => slot.round === selectedRound);
+      : board.filter((slot) => slot.round === Number(selectedRound));
   }, [board, selectedRound]);
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function DraftBoard({
   }, [currentOverallPick, selectedRound, visibleBoard]);
 
   return (
-    <div className="panel scroll-panel" ref={scrollPanelRef}>
+    <div className="panel scroll-panel">
       <div className="draft-board-header">
         <h3>Draft Board</h3>
 
@@ -131,7 +131,7 @@ export default function DraftBoard({
         </div>
       </div>
 
-      <div className="pick-list">
+      <div className="pick-list" ref={scrollPanelRef}>
         {visibleBoard.map((slot) => (
           <PickItem
             key={slot.overall}
