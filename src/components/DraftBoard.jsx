@@ -74,27 +74,35 @@ export default function DraftBoard({
 
   const scrollPanelRef = useRef(null);
 
-  useEffect(() => {
-    if (!scrollPanelRef.current || !currentOverallPick) return;
+  const availableRounds = useMemo(
+    () => [...new Set(board.map((slot) => slot.round))],
+    [board]
+  );
 
-    const target = scrollPanelRef.current.querySelector(
+  const visibleBoard = useMemo(() => {
+    return selectedRound === 'ALL'
+      ? board
+      : board.filter((slot) => slot.round === selectedRound);
+  }, [board, selectedRound]);
+
+  useEffect(() => {
+    const panel = scrollPanelRef.current;
+    if (!panel || !currentOverallPick) return;
+
+    const target = panel.querySelector(
       `[data-pick-overall="${currentOverallPick}"]`
     );
 
-    if (target) {
-      target.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  }, [currentOverallPick, selectedRound]);
+    if (!target) return;
 
-  const availableRounds = [...new Set(board.map((slot) => slot.round))];
+    const targetScrollTop =
+      target.offsetTop - panel.clientHeight / 2 + target.clientHeight / 2;
 
-  const visibleBoard =
-    selectedRound === 'ALL'
-      ? board
-      : board.filter((slot) => slot.round === selectedRound);
+    panel.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: 'smooth',
+    });
+  }, [currentOverallPick, selectedRound, visibleBoard]);
 
   return (
     <div className="panel scroll-panel" ref={scrollPanelRef}>

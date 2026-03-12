@@ -7,18 +7,22 @@
   --bg: #0f172a;
   --bg-gradient-top: rgba(37, 99, 235, 0.18);
   --bg-gradient-bottom: #111827;
+
   --panel: rgba(15, 23, 42, 0.85);
   --panel-solid: #121826;
   --panel-2: rgba(30, 41, 59, 0.85);
+
   --text: #f5f7fa;
   --text-strong: #ffffff;
   --text-muted: #cbd5e1;
   --text-soft: #94a3b8;
+
   --border: rgba(148, 163, 184, 0.18);
   --border-strong: rgba(148, 163, 184, 0.24);
   --border-light: rgba(255, 255, 255, 0.1);
   --border-light-hover: rgba(255, 255, 255, 0.22);
   --border-light-active: rgba(255, 255, 255, 0.24);
+
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
 
   --primary-start: #2563eb;
@@ -55,18 +59,22 @@
   --bg: #f1f2f4;
   --bg-gradient-top: rgba(105, 183, 255, 0.18);
   --bg-gradient-bottom: #dfe6ef;
+
   --panel: rgba(255, 255, 255, 0.92);
   --panel-solid: #ffffff;
   --panel-2: #ffffff;
+
   --text: #000000;
   --text-strong: #000000;
   --text-muted: #415066;
   --text-soft: #6b7a90;
+
   --border: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.14);
   --border-light: rgba(0, 0, 0, 0.12);
   --border-light-hover: rgba(0, 0, 0, 0.2);
   --border-light-active: rgba(105, 183, 255, 0.45);
+
   --shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
 
   --primary-start: #69b7ff;
@@ -107,6 +115,13 @@ body,
   color: var(--text);
 }
 
+html,
+body,
+#root,
+.app-shell {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -129,6 +144,11 @@ select {
 
 button {
   cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+  display: block;
 }
 
 .app-shell {
@@ -216,7 +236,12 @@ button {
   border-radius: 12px;
   padding: 12px 16px;
   font-weight: 700;
-  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .primary-btn,
@@ -364,8 +389,9 @@ button {
 
 .draft-layout {
   display: grid;
-  grid-template-columns: 420px 1fr;
+  grid-template-columns: 420px minmax(0, 1fr);
   gap: 18px;
+  align-items: start;
 }
 
 .panel {
@@ -374,10 +400,29 @@ button {
 
 .scroll-panel {
   max-height: calc(100vh - 180px);
-  overflow: auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.pick-list,
+.draft-board-header {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex: 0 0 auto;
+}
+
+.pick-list {
+  display: grid;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  scroll-behavior: smooth;
+}
+
 .player-list {
   display: grid;
   gap: 12px;
@@ -385,6 +430,17 @@ button {
 
 .pick-card {
   padding: 14px;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+  scroll-margin-block: 120px;
+}
+
+.pick-card:hover,
+.player-card:hover {
+  transform: translateY(-1px);
 }
 
 .pick-header,
@@ -426,6 +482,10 @@ button {
 
 .player-card {
   padding: 16px;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .player-card h4,
@@ -490,7 +550,11 @@ button {
   border-radius: 12px;
   padding: 10px 14px;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .selector-action.active,
@@ -517,7 +581,11 @@ button {
   justify-content: center;
   gap: 6px;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .team-card.compact:hover {
@@ -560,7 +628,11 @@ button {
   font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .round-card:hover {
@@ -622,7 +694,6 @@ button {
   align-items: center;
 }
 
-
 .draft-slot-logo {
   width: 42px;
   height: 42px;
@@ -656,12 +727,101 @@ button {
   color: var(--text);
   background: var(--chip-bg);
   border: 1px solid transparent;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease;
 }
 
 .draft-slot-upcoming-chip.next {
   color: var(--next-pick);
   border: 1px solid var(--next-pick);
   box-shadow: 0 0 8px var(--next-pick-shadow);
+}
+
+.player-list-header {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.player-list-title {
+  margin: 0;
+  color: var(--text);
+}
+
+.remaining-picks-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.remaining-picks-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.remaining-picks-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.remaining-pick-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--chip-bg);
+  border: 1px solid transparent;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease;
+}
+
+.remaining-pick-chip.next {
+  color: var(--next-pick);
+  border: 1px solid var(--next-pick);
+  box-shadow: 0 0 8px var(--next-pick-shadow);
+}
+
+.round-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.round-filter-btn {
+  border: 1px solid var(--border-light);
+  background: var(--selector-bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.round-filter-btn.active,
+.round-filter-btn:hover {
+  background: var(--selector-hover);
+  border-color: var(--accent);
+}
+
+.current-pick-card {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent-soft-strong) inset,
+    0 0 18px var(--accent-soft);
 }
 
 @media (max-width: 1200px) {
@@ -682,6 +842,13 @@ button {
 
   .scroll-panel {
     max-height: none;
+    overflow: visible;
+  }
+
+  .pick-list {
+    overflow-y: visible;
+    max-height: none;
+    padding-right: 0;
   }
 
   .team-grid.team-grid-8 {
@@ -716,83 +883,8 @@ button {
   .quick-stats {
     grid-template-columns: 1fr;
   }
-}
-.player-list-header {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 22px;
-}
 
-.player-list-title {
-  margin: 0;
-  color: var(--text);
-}
-
-
-  .remaining-picks-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 6px;
-  margin-bottom: 6px;
-}
-
-.remaining-picks-label {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-
-.remaining-picks-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.remaining-pick-chip {
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text);
-  background: var(--chip-bg);
-  border: 1px solid transparent;
-}
-
-.remaining-pick-chip.next {
-  color: var(--next-pick);
-  border: 1px solid var(--next-pick);
-  box-shadow: 0 0 8px var(--next-pick-shadow);
-}
-.draft-board-header {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.round-filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.round-filter-btn {
-  border: 1px solid var(--border-light);
-  background: var(--selector-bg);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-weight: 700;
-}
-
-.round-filter-btn.active,
-.round-filter-btn:hover {
-  background: var(--selector-hover);
-  border-color: var(--accent);
-}
-
-.current-pick-card {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-soft-strong) inset;
+  .top-nav {
+    align-items: flex-start;
+  }
 }
