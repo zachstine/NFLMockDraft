@@ -399,7 +399,7 @@ img {
 }
 
 .draft-board-panel {
-  max-height: calc(100vh - 180px);
+  max-height: calc(150vh - 180px);
   min-height: 600px;
   overflow: hidden;
   display: flex;
@@ -841,7 +841,7 @@ img {
   }
 
   .scroll-panel {
-  max-height: calc(150vh - 180px);
+  max-height: calc(100vh - 180px);
   min-height: 600px;
   overflow-y: auto;
 }
