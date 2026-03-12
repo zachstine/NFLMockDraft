@@ -74,7 +74,6 @@ function getDraftStatusLabel(draft) {
 
 function getDraftProgressLabel(draft) {
   if (!draft) return '—';
-
   if (draft.status === 'completed') return 'Finished';
   if (draft.currentOverallPick) return `On pick #${draft.currentOverallPick}`;
   return 'Not started';
@@ -139,9 +138,7 @@ function DraftListCard({ drafts }) {
       </div>
 
       {drafts.length === 0 ? (
-        <div className="empty-state">
-          You have no saved drafts yet.
-        </div>
+        <div className="empty-state">You have no saved drafts yet.</div>
       ) : (
         <div className="player-list">
           {drafts.map((draft) => (
@@ -149,9 +146,7 @@ function DraftListCard({ drafts }) {
               <div className="pick-header">
                 <div style={{ display: 'grid', gap: '6px' }}>
                   <h4>{draft.title || 'Untitled Draft'}</h4>
-                  <div className="subtle">
-                    Created {formatDate(draft.createdAt)}
-                  </div>
+                  <div className="subtle">Created {formatDate(draft.createdAt)}</div>
                 </div>
 
                 <div className="inline-row">
@@ -161,15 +156,11 @@ function DraftListCard({ drafts }) {
               </div>
 
               <div className="inline-row" style={{ marginTop: '12px' }}>
-                <span className="team-pill">
-                  Team: {draft.selectedTeam || '—'}
-                </span>
+                <span className="team-pill">Team: {draft.selectedTeam || '—'}</span>
                 <span className="badge">
                   Updated: {formatDateTime(draft.updatedAt || draft.createdAt)}
                 </span>
-                <span className="badge">
-                  Rounds: {draft.rounds || 7}
-                </span>
+                <span className="badge">Rounds: {draft.rounds || 7}</span>
               </div>
 
               <div className="player-actions">
@@ -198,9 +189,7 @@ function GroupsListCard({ groups }) {
       </div>
 
       {groups.length === 0 ? (
-        <div className="empty-state">
-          You are not in any groups yet.
-        </div>
+        <div className="empty-state">You are not in any groups yet.</div>
       ) : (
         <div className="player-list">
           {groups.map((group) => (
@@ -208,9 +197,7 @@ function GroupsListCard({ groups }) {
               <div className="pick-header">
                 <div style={{ display: 'grid', gap: '6px' }}>
                   <h4>{group.name || 'Untitled Group'}</h4>
-                  <div className="subtle">
-                    Created {formatDate(group.createdAt)}
-                  </div>
+                  <div className="subtle">Created {formatDate(group.createdAt)}</div>
                 </div>
 
                 <div className="inline-row">
@@ -268,7 +255,6 @@ export default function ProfilePage() {
 
   const [groupName, setGroupName] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
-
   const [joinCode, setJoinCode] = useState('');
 
   async function loadProfilePageData(currentUser) {
@@ -283,43 +269,56 @@ export default function ProfilePage() {
     setLoading(true);
     setPageError('');
 
+    const errors = [];
+
     try {
-      const userRef = doc(db, 'users', currentUser.uid);
-      const draftsRef = collection(db, 'drafts');
-      const groupsRef = collection(db, 'groups');
+      const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
+      setProfileData(userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null);
+    } catch (error) {
+      console.error('[profile-page] user read failed', error);
+      errors.push('profile');
+      setProfileData(null);
+    }
 
-      const [userSnap, draftsSnap, groupsSnap] = await Promise.all([
-        getDoc(userRef),
-        getDocs(query(draftsRef, where('ownerUid', '==', currentUser.uid))),
-        getDocs(query(groupsRef, where('memberUids', 'array-contains', currentUser.uid))),
-      ]);
-
-      const userData = userSnap.exists()
-        ? { id: userSnap.id, ...userSnap.data() }
-        : null;
+    try {
+      const draftsSnap = await getDocs(
+        query(collection(db, 'drafts'), where('ownerUid', '==', currentUser.uid))
+      );
 
       const draftRows = draftsSnap.docs.map((item) => ({
         id: item.id,
         ...item.data(),
       }));
 
+      setDrafts(sortByNewest(draftRows, 'updatedAt'));
+    } catch (error) {
+      console.error('[profile-page] drafts read failed', error);
+      errors.push('drafts');
+      setDrafts([]);
+    }
+
+    try {
+      const groupsSnap = await getDocs(
+        query(collection(db, 'groups'), where('memberUids', 'array-contains', currentUser.uid))
+      );
+
       const groupRows = groupsSnap.docs.map((item) => ({
         id: item.id,
         ...item.data(),
       }));
 
-      setProfileData(userData);
-      setDrafts(sortByNewest(draftRows, 'updatedAt'));
       setGroups(sortByNewest(groupRows, 'createdAt'));
     } catch (error) {
-      console.error('[profile-page] failed to load profile data', error);
-      setPageError(error?.message || 'Failed to load profile data.');
-      setProfileData(null);
-      setDrafts([]);
+      console.error('[profile-page] groups read failed', error);
+      errors.push('groups');
       setGroups([]);
-    } finally {
-      setLoading(false);
     }
+
+    if (errors.length > 0) {
+      setPageError(`Some profile data could not be loaded: ${errors.join(', ')}.`);
+    }
+
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -336,9 +335,7 @@ export default function ProfilePage() {
     );
   }, [profileData, profile, user]);
 
-  const memberSince = useMemo(() => {
-    return formatDate(profileData?.createdAt);
-  }, [profileData]);
+  const memberSince = useMemo(() => formatDate(profileData?.createdAt), [profileData]);
 
   function openEditModal() {
     setActionError('');
@@ -382,9 +379,7 @@ export default function ProfilePage() {
     setActionSuccess('');
 
     try {
-      const userRef = doc(db, 'users', user.uid);
-
-      await updateDoc(userRef, {
+      await updateDoc(doc(db, 'users', user.uid), {
         username: editUsername.trim(),
         favoriteTeam: editFavoriteTeam.trim(),
         bio: editBio.trim(),
@@ -463,9 +458,9 @@ export default function ProfilePage() {
     setActionSuccess('');
 
     try {
-      const groupsRef = collection(db, 'groups');
-      const inviteQuery = query(groupsRef, where('inviteCode', '==', normalizedCode));
-      const snap = await getDocs(inviteQuery);
+      const snap = await getDocs(
+        query(collection(db, 'groups'), where('inviteCode', '==', normalizedCode))
+      );
 
       if (snap.empty) {
         throw new Error('No group found for that invite code.');
@@ -473,8 +468,6 @@ export default function ProfilePage() {
 
       const groupDoc = snap.docs[0];
       const groupData = groupDoc.data();
-      const groupRef = doc(db, 'groups', groupDoc.id);
-
       const memberUids = Array.isArray(groupData.memberUids) ? groupData.memberUids : [];
 
       if (memberUids.includes(user.uid)) {
@@ -483,7 +476,7 @@ export default function ProfilePage() {
         return;
       }
 
-      await updateDoc(groupRef, {
+      await updateDoc(doc(db, 'groups', groupDoc.id), {
         memberUids: arrayUnion(user.uid),
         memberCount: increment(1),
       });
@@ -501,9 +494,11 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="page">
-        <TopNav />
-        <div className="loading-screen">Loading profile...</div>
+      <div className="app-shell">
+        <div className="page">
+          <TopNav />
+          <div className="loading-screen">Loading profile...</div>
+        </div>
       </div>
     );
   }
@@ -515,12 +510,8 @@ export default function ProfilePage() {
           <h2>Profile</h2>
           <p className="subtle">You need to sign in to view your profile.</p>
           <div className="inline-row" style={{ marginTop: '12px' }}>
-            <Link to="/login" className="primary-btn">
-              Go to Login
-            </Link>
-            <Link to="/" className="ghost-btn">
-              Back Home
-            </Link>
+            <Link to="/login" className="primary-btn">Go to Login</Link>
+            <Link to="/" className="ghost-btn">Back Home</Link>
           </div>
         </div>
       </div>
@@ -555,9 +546,7 @@ export default function ProfilePage() {
             <div className="selector-header">
               <div>
                 <h1 style={{ marginBottom: '6px' }}>{displayUsername}</h1>
-                <div className="subtle">
-                  {profileData?.email || user.email || 'No email available'}
-                </div>
+                <div className="subtle">{profileData?.email || user.email || 'No email available'}</div>
               </div>
 
               <div className="inline-row">
@@ -574,34 +563,16 @@ export default function ProfilePage() {
             </div>
 
             <div className="quick-stats">
-              <ProfileStatCard
-                label="Drafts"
-                value={drafts.length}
-                sublabel="Saved and completed mocks"
-              />
-              <ProfileStatCard
-                label="Groups"
-                value={groups.length}
-                sublabel="Spaces to compare with friends"
-              />
-              <ProfileStatCard
-                label="Member Since"
-                value={memberSince}
-                sublabel="Account creation date"
-              />
-              <ProfileStatCard
-                label="Favorite Team"
-                value={profileData?.favoriteTeam || '—'}
-                sublabel="Set in Edit Profile"
-              />
+              <ProfileStatCard label="Drafts" value={drafts.length} sublabel="Saved and completed mocks" />
+              <ProfileStatCard label="Groups" value={groups.length} sublabel="Spaces to compare with friends" />
+              <ProfileStatCard label="Member Since" value={memberSince} sublabel="Account creation date" />
+              <ProfileStatCard label="Favorite Team" value={profileData?.favoriteTeam || '—'} sublabel="Set in Edit Profile" />
             </div>
 
             <div className="panel" style={{ marginTop: '18px', padding: '16px' }}>
               <h3 style={{ marginTop: 0 }}>About</h3>
               <p className="subtle" style={{ marginBottom: 0 }}>
-                {profileData?.bio?.trim()
-                  ? profileData.bio
-                  : 'No bio added yet. Add one in Edit Profile.'}
+                {profileData?.bio?.trim() ? profileData.bio : 'No bio added yet. Add one in Edit Profile.'}
               </p>
             </div>
           </div>
@@ -615,17 +586,14 @@ export default function ProfilePage() {
                   <div className="stat-label">Username</div>
                   <div className="stat-value">{displayUsername}</div>
                 </div>
-
                 <div>
                   <div className="stat-label">Email</div>
                   <div className="subtle">{profileData?.email || user.email || '—'}</div>
                 </div>
-
                 <div>
                   <div className="stat-label">UID</div>
                   <div className="subtle">{user.uid}</div>
                 </div>
-
                 <div>
                   <div className="stat-label">Last Loaded</div>
                   <div className="subtle">{new Date().toLocaleString()}</div>
