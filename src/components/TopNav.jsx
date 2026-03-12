@@ -17,8 +17,11 @@ export default function TopNav() {
   const { user, profile } = useAuth();
 
   const displayUsername = getDisplayUsername(profile, user);
+
   const isHome = location.pathname === '/';
   const isProfile = location.pathname === '/profile';
+  const isDraftPage = location.pathname.startsWith('/draft/');
+  const isGroupPage = location.pathname.startsWith('/groups/');
 
   async function handleLogout() {
     await logOutUser();
@@ -50,6 +53,26 @@ export default function TopNav() {
         >
           Profile
         </button>
+
+        {isGroupPage ? (
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => navigate(location.pathname)}
+          >
+            Group
+          </button>
+        ) : null}
+
+        {isDraftPage ? (
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => navigate(location.pathname)}
+          >
+            Draft
+          </button>
+        ) : null}
 
         <button
           type="button"
