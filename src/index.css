@@ -408,8 +408,8 @@ img {
 
 .draft-board-header {
   display: grid;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 0px;
+  margin-bottom: 8px;
   flex: 0 0 auto;
 }
 
@@ -892,7 +892,9 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+  min-height: 0;
+  line-height: 1;
 }
 
 .round-selector-wrap {
