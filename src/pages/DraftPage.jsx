@@ -12,9 +12,8 @@ import {
 import { draftCapital2026 } from '../data/draftCapital2026';
 import { NFL_TEAMS } from '../data/teams';
 
-function getUpcomingPicks(teamAbbr, completedPicks) {
+function getUpcomingPicks(teamAbbr, currentOverallPick) {
   const allPicks = draftCapital2026[teamAbbr] || [];
-  const currentOverallPick = completedPicks + 1;
   return allPicks.filter((pickNumber) => pickNumber >= currentOverallPick);
 }
 
@@ -164,10 +163,12 @@ export default function DraftPage() {
 
   const activeTeamAbbr = currentSlot?.team ?? null;
   const activeTeam = NFL_TEAMS.find((team) => team.abbr === activeTeamAbbr) ?? null;
-  const activeTeamName = activeTeam?.name ?? activeTeamAbbr ?? '';
-  const upcomingPicks = activeTeamAbbr
-    ? getUpcomingPicks(activeTeamAbbr, completedPicks)
-    : [];
+
+  const upcomingPicks =
+    activeTeamAbbr && currentSlot
+      ? getUpcomingPicks(activeTeamAbbr, currentSlot.overall)
+      : [];
+
   const nextUpcomingPick = upcomingPicks[0] ?? null;
 
   return (
@@ -238,6 +239,9 @@ export default function DraftPage() {
               canUserPick={canUserPick && !savingPick && !autoPicking}
               onPick={handlePick}
               loading={loadingPlayers}
+              activeTeam={activeTeam}
+              upcomingPicks={upcomingPicks}
+              nextUpcomingPick={nextUpcomingPick}
             />
           </div>
         </div>
