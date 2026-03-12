@@ -9,6 +9,19 @@ import {
   listenToMockDraft,
   makeDraftPick,
 } from '../services/draftService';
+import { draftCapital2026 } from '../data/draftCapital2026';
+import { teams } from '../data/teams';
+
+function getShortTeamName(teamName = '') {
+  const parts = teamName.trim().split(' ');
+  return parts[parts.length - 1] || teamName;
+}
+
+function getUpcomingPicks(teamAbbr, completedPicks) {
+  const allPicks = draftCapital2026[teamAbbr] || [];
+  const currentOverallPick = completedPicks + 1;
+  return allPicks.filter((pickNumber) => pickNumber >= currentOverallPick);
+}
 
 export default function DraftPage() {
   const { mockId } = useParams();
@@ -151,28 +164,35 @@ export default function DraftPage() {
 
   const completedPicks = mockDraft.picks?.length ?? 0;
   const totalPicks = board.length;
+  const remainingPicks = Math.max(totalPicks - completedPicks, 0);
   const positionOptions = ['ALL', ...new Set(players.map((player) => player.position))].sort();
+
+  const activeTeamAbbr = currentSlot?.team ?? null;
+  const activeTeam = teams.find((team) => team.abbr === activeTeamAbbr) ?? null;
+  const activeTeamName = activeTeam ? getShortTeamName(activeTeam.name) : activeTeamAbbr ?? '';
+  const upcomingPicks = activeTeamAbbr
+    ? getUpcomingPicks(activeTeamAbbr, completedPicks)
+    : [];
+  const nextUpcomingPick = upcomingPicks[0] ?? null;
 
   return (
     <div className="app-shell">
       <div className="page">
         <TopNav />
 
-        <div className="panel" style={{ marginBottom: '18px' }}>
-          <div className="draft-summary-grid">
-            <div>
-              <h2 style={{ marginBottom: '8px' }}>Live Mock Draft</h2>
-              <div className="subtle">
-                {mockDraft.selectedTeam === 'ALL'
-                  ? 'You are controlling every franchise.'
-                  : `You are drafting for ${mockDraft.selectedTeam}. Other teams auto-pick BPA.`}
-              </div>
+        <div className="draft-top-banner panel">
+          <div className="draft-top-banner-left">
+            <div className="draft-top-banner-title">
+              {mockDraft.selectedTeam === 'ALL'
+                ? 'User-controlled full draft'
+                : `${mockDraft.selectedTeam} user-controlled | CPU BPA for others`}
             </div>
-            <div className="inline-row">
-              <span className="badge">Completed: {completedPicks}</span>
-              <span className="badge">Remaining: {Math.max(totalPicks - completedPicks, 0)}</span>
-              <span className="badge">Rounds: {mockDraft.rounds}</span>
-            </div>
+          </div>
+
+          <div className="draft-top-banner-right">
+            <span className="badge">Completed: {completedPicks}</span>
+            <span className="badge">Remaining: {remainingPicks}</span>
+            <span className="badge">Rounds: {mockDraft.rounds}</span>
           </div>
         </div>
 
@@ -180,6 +200,37 @@ export default function DraftPage() {
           <DraftBoard board={board} picks={mockDraft.picks ?? []} />
 
           <div>
+            <div className="panel draft-side-team-panel" style={{ marginBottom: '18px' }}>
+              <div className="draft-side-team-name">{activeTeamName}</div>
+
+              {activeTeam?.logo ? (
+                <img
+                  className="draft-side-team-logo"
+                  src={activeTeam.logo}
+                  alt={activeTeam.name}
+                />
+              ) : null}
+
+              <div className="draft-side-team-label">Upcoming Picks</div>
+
+              <div className="draft-side-team-picks">
+                {upcomingPicks.length > 0 ? (
+                  upcomingPicks.map((pickNumber) => (
+                    <span
+                      key={pickNumber}
+                      className={`draft-side-pick-chip ${
+                        pickNumber === nextUpcomingPick ? 'next-pick' : ''
+                      }`}
+                    >
+                      {pickNumber}
+                    </span>
+                  ))
+                ) : (
+                  <span className="subtle">No remaining picks</span>
+                )}
+              </div>
+            </div>
+
             <div className="panel" style={{ marginBottom: '18px' }}>
               <div className="toolbar">
                 <div className="toolbar-top">
