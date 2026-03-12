@@ -364,3 +364,122 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.selector-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.selector-action {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: white;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.selector-action.active,
+.selector-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 14px;
+}
+
+.team-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #121826;
+  border-radius: 16px;
+  padding: 14px 10px;
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.team-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.team-card.active {
+  border-color: #4da3ff;
+  background: rgba(77, 163, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(77, 163, 255, 0.2) inset;
+}
+
+.team-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.team-name {
+  text-align: center;
+  font-size: 0.88rem;
+  line-height: 1.15;
+}
+
+.team-abbr {
+  font-size: 0.78rem;
+  opacity: 0.72;
+  letter-spacing: 0.04em;
+}
+
+.round-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(56px, 1fr));
+  gap: 12px;
+}
+
+.round-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #121826;
+  color: white;
+  border-radius: 14px;
+  min-height: 58px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.round-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.round-card.active {
+  border-color: #4da3ff;
+  background: rgba(77, 163, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(77, 163, 255, 0.2) inset;
+}
+
+@media (max-width: 768px) {
+  .selector-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .round-grid {
+    grid-template-columns: repeat(4, minmax(56px, 1fr));
+  }
+}

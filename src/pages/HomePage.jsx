@@ -1,19 +1,30 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from '../components/TopNav';
-import { ALL_TEAMS_OPTION, NFL_TEAMS } from '../data/teams';
+import { NFL_TEAMS } from '../data/teams';
 import { createMockDraft } from '../services/draftService';
 import { useAuth } from '../context/AuthContext';
+
+const ROUND_OPTIONS = ['1', '2', '3', '4', '5', '6', '7'];
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const [selectedTeam, setSelectedTeam] = useState('ALL');
-  const [rounds, setRounds] = useState('7');
+
+  const [selectedTeam, setSelectedTeam] = useState('');
+  const [rounds, setRounds] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
-  const roundLabel = useMemo(() => (rounds === 'ALL' ? '1-7' : `1-${rounds}`), [rounds]);
+  const roundLabel = useMemo(() => {
+    if (!rounds) return 'None';
+    return rounds === 'ALL' ? '1-7' : `1-${rounds}`;
+  }, [rounds]);
+
+  const picksInRun = useMemo(() => {
+    if (!rounds) return 0;
+    return (rounds === 'ALL' ? 7 : Number(rounds)) * 32;
+  }, [rounds]);
 
   async function handleStartDraft() {
     setStarting(true);
@@ -22,6 +33,14 @@ export default function HomePage() {
     try {
       if (!user?.uid) {
         throw new Error('You must be logged in to start a draft.');
+      }
+
+      if (!selectedTeam) {
+        throw new Error('Select a team or choose Select All.');
+      }
+
+      if (!rounds) {
+        throw new Error('Select rounds or choose Select All.');
       }
 
       console.log('Starting draft with:', {
@@ -58,57 +77,101 @@ export default function HomePage() {
           <div className="hero-panel panel">
             <h1>Start a new mock draft</h1>
             <p className="subtle">
-              Choose one franchise or run the entire board. This starter saves drafts to Firestore and auto-picks for non-user teams when you draft for a single club.
+              Pick one franchise or run the whole board. Choose your team first, then choose how many rounds to simulate.
             </p>
 
-            <div className="selection-grid" style={{ marginTop: '18px' }}>
-              <div className="field">
-                <label htmlFor="team-select">Team selection</label>
-                <select
-                  id="team-select"
-                  value={selectedTeam}
-                  onChange={(event) => setSelectedTeam(event.target.value)}
+            <div style={{ marginTop: '24px' }}>
+              <div className="selector-header">
+                <div>
+                  <h2 className="selector-title">Choose your team</h2>
+                  <p className="subtle">No team is selected by default.</p>
+                </div>
+                <button
+                  type="button"
+                  className={`selector-action ${selectedTeam === 'ALL' ? 'active' : ''}`}
+                  onClick={() => setSelectedTeam('ALL')}
                 >
-                  <option value={ALL_TEAMS_OPTION.value}>{ALL_TEAMS_OPTION.label}</option>
-                  {NFL_TEAMS.map((team) => (
-                    <option key={team.abbr} value={team.abbr}>
-                      {team.city} {team.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="field">
-                <label htmlFor="round-select">Round selection</label>
-                <select
-                  id="round-select"
-                  value={rounds}
-                  onChange={(event) => setRounds(event.target.value)}
-                >
-                  <option value="1">Round 1</option>
-                  <option value="2">Rounds 1-2</option>
-                  <option value="3">Rounds 1-3</option>
-                  <option value="4">Rounds 1-4</option>
-                  <option value="5">Rounds 1-5</option>
-                  <option value="6">Rounds 1-6</option>
-                  <option value="7">Rounds 1-7</option>
-                  <option value="ALL">All rounds</option>
-                </select>
-              </div>
-
-              <div className="inline-row">
-                <button className="primary-btn" onClick={handleStartDraft} disabled={starting}>
-                  {starting ? 'Starting...' : 'Start Draft'}
+                  Select All
                 </button>
-                {error && <span className="error-text">{error}</span>}
               </div>
+
+              <div className="team-grid">
+                {NFL_TEAMS.map((team) => {
+                  const isActive = selectedTeam === team.abbr;
+
+                  return (
+                    <button
+                      key={team.abbr}
+                      type="button"
+                      className={`team-card ${isActive ? 'active' : ''}`}
+                      onClick={() => setSelectedTeam(team.abbr)}
+                    >
+                      <img
+                        src={team.logo}
+                        alt={`${team.city} ${team.name} logo`}
+                        className="team-logo"
+                      />
+                      <span className="team-name">{team.city} {team.name}</span>
+                      <span className="team-abbr">{team.abbr}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ marginTop: '28px' }}>
+              <div className="selector-header">
+                <div>
+                  <h2 className="selector-title">Choose rounds</h2>
+                  <p className="subtle">Select a range or simulate the full draft.</p>
+                </div>
+                <button
+                  type="button"
+                  className={`selector-action ${rounds === 'ALL' ? 'active' : ''}`}
+                  onClick={() => setRounds('ALL')}
+                >
+                  Select All
+                </button>
+              </div>
+
+              <div className="round-grid">
+                {ROUND_OPTIONS.map((round) => {
+                  const isActive = rounds === round;
+
+                  return (
+                    <button
+                      key={round}
+                      type="button"
+                      className={`round-card ${isActive ? 'active' : ''}`}
+                      onClick={() => setRounds(round)}
+                    >
+                      {round}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="inline-row" style={{ marginTop: '24px' }}>
+              <button
+                className="primary-btn"
+                onClick={handleStartDraft}
+                disabled={starting || !selectedTeam || !rounds}
+              >
+                {starting ? 'Starting...' : 'Start Draft'}
+              </button>
+              {error && <span className="error-text">{error}</span>}
             </div>
 
             <div className="quick-stats">
               <div className="stat-card">
                 <div className="stat-label">Mode</div>
                 <div className="stat-value">
-                  {selectedTeam === 'ALL' ? 'League-wide' : `${selectedTeam} focus`}
+                  {!selectedTeam
+                    ? 'Not selected'
+                    : selectedTeam === 'ALL'
+                    ? 'League-wide'
+                    : `${selectedTeam} focus`}
                 </div>
               </div>
               <div className="stat-card">
@@ -117,7 +180,7 @@ export default function HomePage() {
               </div>
               <div className="stat-card">
                 <div className="stat-label">Picks in run</div>
-                <div className="stat-value">{(rounds === 'ALL' ? 7 : Number(rounds)) * 32}</div>
+                <div className="stat-value">{picksInRun}</div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">Draft year</div>
@@ -129,15 +192,15 @@ export default function HomePage() {
           <div className="side-panel panel">
             <h2>Starter notes</h2>
             <p className="subtle">
-              This first version is built to give you a stable shell in VSCode: auth, routing, draft board, player list, and Firestore persistence.
+              This version swaps dropdowns for visual selectors so the pre-draft page feels more like a real draft hub.
             </p>
 
             <ul className="subtle" style={{ paddingLeft: '20px' }}>
-              <li>Username/password style auth</li>
-              <li>Draft board stays visible while you pick</li>
-              <li>All teams or one team mode</li>
-              <li>Sample player fallback before live imports</li>
-              <li>Ready for GitHub + Firebase Hosting</li>
+              <li>Clickable team logo cards</li>
+              <li>No default team selection</li>
+              <li>Round boxes for 1 through 7</li>
+              <li>Select All for teams and rounds</li>
+              <li>Start button disabled until both are chosen</li>
             </ul>
           </div>
         </div>
