@@ -84,7 +84,7 @@ export default function DraftBoard({
     if (target) {
       target.scrollIntoView({
         behavior: 'smooth',
-        block: 'nearest',
+        block: 'center',
       });
     }
   }, [currentOverallPick, selectedRound]);
