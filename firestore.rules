@@ -36,14 +36,19 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, create, update: if isSelf(userId);
+      allow read: if signedIn();
+      allow create, update: if isSelf(userId);
       allow delete: if false;
     }
 
     match /drafts/{draftId} {
       allow create: if creatingOwnDraft();
 
-      allow read: if draftOwner();
+      allow read: if draftOwner() || (
+        signedIn() &&
+        resource.data.groupIds is list &&
+        resource.data.groupIds.size() > 0
+      );
 
       allow update, delete: if draftOwner();
     }
