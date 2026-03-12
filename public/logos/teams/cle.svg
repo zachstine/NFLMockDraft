@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="CLE placeholder logo">
-  <rect x="8" y="8" width="240" height="240" rx="40" fill="#111827" stroke="#334155" stroke-width="8"/>
-  <circle cx="128" cy="92" r="36" fill="#1f2937" stroke="#475569" stroke-width="6"/>
-  <rect x="52" y="142" width="152" height="54" rx="18" fill="#1f2937" stroke="#475569" stroke-width="6"/>
-  <text x="128" y="103" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#e5e7eb">CLE</text>
-  <text x="128" y="177" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#93c5fd">CLE</text>
-</svg>
