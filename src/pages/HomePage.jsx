@@ -20,6 +20,18 @@ export default function HomePage() {
     setError('');
 
     try {
+      if (!user?.uid) {
+        throw new Error('You must be logged in to start a draft.');
+      }
+
+      console.log('Starting draft with:', {
+        uid: user?.uid,
+        username: profile?.username,
+        selectedTeam,
+        rounds: rounds === 'ALL' ? 7 : Number(rounds),
+        year: '2026',
+      });
+
       const mockId = await createMockDraft({
         ownerUid: user.uid,
         username: profile?.username ?? 'GM',
@@ -30,6 +42,7 @@ export default function HomePage() {
 
       navigate(`/draft/${mockId}`);
     } catch (startError) {
+      console.error('Start draft failed:', startError);
       setError(startError.message || 'Could not start draft.');
     } finally {
       setStarting(false);

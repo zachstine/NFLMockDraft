@@ -1,12 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
     function isOwner(uid) {
-      return signedIn() && request.auth.uid == uid;
+      return isSignedIn() && request.auth.uid == uid;
     }
 
     match /users/{uid} {
@@ -16,10 +16,27 @@ service cloud.firestore {
     }
 
     match /usernames/{username} {
-      allow create: if signedIn()
+      allow create: if isSignedIn()
         && request.resource.data.uid == request.auth.uid;
       allow read: if true;
       allow update, delete: if false;
+    }
+
+    match /mocks/{mockId} {
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+      allow read, update, delete: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /mocks/{mockId}/picks/{pickId} {
+      allow read, write: if isSignedIn()
+        && get(/databases/$(database)/documents/mocks/$(mockId)).data.ownerUid == request.auth.uid;
+    }
+
+    match /draftClasses/{year}/players/{playerId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }
