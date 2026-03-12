@@ -146,21 +146,6 @@ export default function HomePage() {
       <div className="page">
         <TopNav />
 
-        <div className="top-nav" style={{ marginBottom: '18px' }}>
-          <div className="brand-block">
-            <div className="brand-title">NFL Mock Draft</div>
-            <div className="brand-subtitle">
-              Build your board, run your draft, and compare results with friends.
-            </div>
-          </div>
-
-          <div className="nav-actions">
-            <Link to="/profile" className="ghost-btn">
-              Profile
-            </Link>
-          </div>
-        </div>
-
         <div className="home-grid">
           <div className="hero-panel panel">
             <div className="selector-header">
@@ -322,6 +307,11 @@ export default function HomePage() {
                 <div className="stat-label">Current round setup</div>
                 <div className="subtle">{roundLabel}</div>
               </div>
+
+              <div>
+                <div className="stat-label">Favorite Team</div>
+                <div className="subtle">{profile?.favoriteTeam || '—'}</div>
+              </div>
             </div>
 
             <div className="inline-row" style={{ marginTop: '20px' }}>
@@ -333,8 +323,7 @@ export default function HomePage() {
             <div className="panel" style={{ marginTop: '18px', padding: '16px' }}>
               <h3 style={{ marginTop: 0, marginBottom: '10px' }}>What’s next</h3>
               <div className="subtle">
-                Profile is now your home for saved drafts, group membership, and account settings.
-                Next up: group creation, joining groups, and sharing completed drafts.
+                Profile is your hub for saved drafts, group membership, and account settings.
               </div>
             </div>
           </div>
