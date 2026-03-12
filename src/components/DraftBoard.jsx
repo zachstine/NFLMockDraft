@@ -1,7 +1,6 @@
+import { useEffect, useMemo, useRef } from 'react';
 import { NFL_TEAMS } from '../data/teams';
 import { draftCapital2026 } from '../data/draftCapital2026';
-
-const [selectedRound, setSelectedRound] = useState('ALL');
 
 function getTeamByAbbr(abbr) {
   return NFL_TEAMS.find((team) => team.abbr === abbr) ?? null;
@@ -11,13 +10,16 @@ function getRemainingTeamPicks(teamAbbr, currentOverallPick) {
   return (draftCapital2026[teamAbbr] || []).filter((pick) => pick >= currentOverallPick);
 }
 
-function PickItem({ slot, pick }) {
+function PickItem({ slot, pick, isCurrent }) {
   const team = getTeamByAbbr(slot.team);
   const remainingPicks = getRemainingTeamPicks(slot.team, slot.overall);
   const nextPick = remainingPicks[0] ?? null;
 
   return (
-    <div className="pick-card">
+    <div
+      className={`pick-card ${isCurrent ? 'current-pick-card' : ''}`}
+      data-pick-overall={slot.overall}
+    >
       <div className="pick-header">
         <span className="pick-number">#{slot.overall}</span>
         <span className="team-pill">{team?.name ?? slot.team}</span>
@@ -58,16 +60,77 @@ function PickItem({ slot, pick }) {
   );
 }
 
-export default function DraftBoard({ board, picks }) {
-  const picksByOverall = new Map(picks.map((pick) => [pick.overallPick, pick]));
+export default function DraftBoard({
+  board,
+  picks,
+  currentOverallPick,
+  selectedRound,
+  onRoundChange,
+}) {
+  const picksByOverall = useMemo(
+    () => new Map(picks.map((pick) => [pick.overallPick, pick])),
+    [picks]
+  );
+
+  const scrollPanelRef = useRef(null);
+
+  useEffect(() => {
+    if (!scrollPanelRef.current || !currentOverallPick) return;
+
+    const target = scrollPanelRef.current.querySelector(
+      `[data-pick-overall="${currentOverallPick}"]`
+    );
+
+    if (target) {
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [currentOverallPick, selectedRound]);
+
+  const availableRounds = [...new Set(board.map((slot) => slot.round))];
+
+  const visibleBoard =
+    selectedRound === 'ALL'
+      ? board
+      : board.filter((slot) => slot.round === selectedRound);
 
   return (
-    <div className="panel scroll-panel">
-      <h3>Draft Board</h3>
+    <div className="panel scroll-panel" ref={scrollPanelRef}>
+      <div className="draft-board-header">
+        <h3>Draft Board</h3>
+
+        <div className="round-filter-row">
+          <button
+            type="button"
+            className={`round-filter-btn ${selectedRound === 'ALL' ? 'active' : ''}`}
+            onClick={() => onRoundChange('ALL')}
+          >
+            All Rounds
+          </button>
+
+          {availableRounds.map((round) => (
+            <button
+              type="button"
+              key={round}
+              className={`round-filter-btn ${selectedRound === round ? 'active' : ''}`}
+              onClick={() => onRoundChange(round)}
+            >
+              Round {round}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="pick-list">
-        {board.map((slot) => (
-          <PickItem key={slot.overall} slot={slot} pick={picksByOverall.get(slot.overall)} />
+        {visibleBoard.map((slot) => (
+          <PickItem
+            key={slot.overall}
+            slot={slot}
+            pick={picksByOverall.get(slot.overall)}
+            isCurrent={slot.overall === currentOverallPick}
+          />
         ))}
       </div>
     </div>
