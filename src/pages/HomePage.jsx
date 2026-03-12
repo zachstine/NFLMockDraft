@@ -7,6 +7,51 @@ import { useAuth } from '../context/AuthContext';
 
 const ROUND_OPTIONS = ['1', '2', '3', '4', '5', '6', '7'];
 
+const TEAM_DIVISIONS = [
+  {
+    conference: 'AFC',
+    division: 'North',
+    teams: ['BAL', 'CIN', 'CLE', 'PIT'],
+  },
+  {
+    conference: 'AFC',
+    division: 'South',
+    teams: ['HOU', 'IND', 'JAX', 'TEN'],
+  },
+  {
+    conference: 'AFC',
+    division: 'East',
+    teams: ['BUF', 'MIA', 'NE', 'NYJ'],
+  },
+  {
+    conference: 'AFC',
+    division: 'West',
+    teams: ['DEN', 'KC', 'LV', 'LAC'],
+  },
+  {
+    conference: 'NFC',
+    division: 'North',
+    teams: ['CHI', 'DET', 'GB', 'MIN'],
+  },
+  {
+    conference: 'NFC',
+    division: 'South',
+    teams: ['ATL', 'NO', 'CAR', 'TB'],
+  },
+  {
+    conference: 'NFC',
+    division: 'East',
+    teams: ['DAL', 'NYG', 'PHI', 'WAS'],
+  },
+  {
+    conference: 'NFC',
+    division: 'West',
+    teams: ['ARI', 'LAR', 'SF', 'SEA'],
+  },
+];
+
+const TEAM_LOOKUP = Object.fromEntries(NFL_TEAMS.map((team) => [team.abbr, team]));
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -112,26 +157,37 @@ export default function HomePage() {
                 </button>
               </div>
 
-              <div className="team-grid team-grid-8">
-                {NFL_TEAMS.map((team) => {
-                  const isActive = selectedTeams.includes(team.abbr);
+              <div className="division-grid">
+                {TEAM_DIVISIONS.map((group) => (
+                  <div key={`${group.conference}-${group.division}`} className="division-column">
+                    <div className="division-label">
+                      {group.conference} {group.division}
+                    </div>
 
-                  return (
-                    <button
-                      key={team.abbr}
-                      type="button"
-                      className={`team-card compact ${isActive ? 'active' : ''}`}
-                      onClick={() => toggleTeam(team.abbr)}
-                    >
-                      <img
-                        src={team.logo}
-                        alt={`${team.name} logo`}
-                        className="team-logo compact"
-                      />
-                      <span className="team-name compact">{team.name}</span>
-                    </button>
-                  );
-                })}
+                    <div className="division-team-list">
+                      {group.teams.map((abbr) => {
+                        const team = TEAM_LOOKUP[abbr];
+                        const isActive = selectedTeams.includes(team.abbr);
+
+                        return (
+                          <button
+                            key={team.abbr}
+                            type="button"
+                            className={`team-card compact ${isActive ? 'active' : ''}`}
+                            onClick={() => toggleTeam(team.abbr)}
+                          >
+                            <img
+                              src={team.logo}
+                              alt={`${team.name} logo`}
+                              className="team-logo compact"
+                            />
+                            <span className="team-name compact">{team.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
