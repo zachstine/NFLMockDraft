@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import DraftPage from './pages/DraftPage';
+import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -16,6 +17,7 @@ export default function App() {
   return (
     <>
       <button
+        type="button"
         className="theme-toggle"
         onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
       >
@@ -24,6 +26,7 @@ export default function App() {
 
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
         <Route
           path="/"
           element={
@@ -32,6 +35,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/draft/:mockId"
           element={
@@ -40,6 +44,16 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage theme={theme} setTheme={setTheme} />
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

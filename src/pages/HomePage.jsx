@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import TopNav from '../components/TopNav';
 import { NFL_TEAMS } from '../data/teams';
 import { createMockDraft } from '../services/draftService';
@@ -52,6 +52,15 @@ const TEAM_DIVISIONS = [
 
 const TEAM_LOOKUP = Object.fromEntries(NFL_TEAMS.map((team) => [team.abbr, team]));
 
+function getDisplayUsername(profile, user) {
+  return (
+    profile?.username ||
+    user?.displayName ||
+    user?.email?.split('@')[0] ||
+    'GM'
+  );
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -62,11 +71,21 @@ export default function HomePage() {
   const [error, setError] = useState('');
 
   const allTeamsSelected = selectedTeams.length === NFL_TEAMS.length;
+  const displayUsername = getDisplayUsername(profile, user);
 
   const roundLabel = useMemo(() => {
     if (!rounds) return 'None';
     return rounds === 'ALL' ? '1-7' : `1-${rounds}`;
   }, [rounds]);
+
+  const selectedTeamLabel = useMemo(() => {
+    if (selectedTeams.length === 0) return 'None';
+    if (selectedTeams.length === NFL_TEAMS.length) return 'All 32';
+    if (selectedTeams.length === 1) {
+      return TEAM_LOOKUP[selectedTeams[0]]?.name ?? selectedTeams[0];
+    }
+    return `${selectedTeams.length} Teams`;
+  }, [selectedTeams]);
 
   function toggleTeam(teamAbbr) {
     setSelectedTeams((prev) =>
@@ -99,14 +118,6 @@ export default function HomePage() {
         throw new Error('Select rounds or choose Select All.');
       }
 
-      console.log('Starting draft with:', {
-        uid: user?.uid,
-        username: profile?.username,
-        selectedTeams,
-        rounds: rounds === 'ALL' ? 7 : Number(rounds),
-        year: '2026',
-      });
-
       const mockId = await createMockDraft({
         ownerUid: user.uid,
         username: profile?.username ?? 'GM',
@@ -135,12 +146,37 @@ export default function HomePage() {
       <div className="page">
         <TopNav />
 
-        <div className="home-grid single-column">
+        <div className="top-nav" style={{ marginBottom: '18px' }}>
+          <div className="brand-block">
+            <div className="brand-title">NFL Mock Draft</div>
+            <div className="brand-subtitle">
+              Build your board, run your draft, and compare results with friends.
+            </div>
+          </div>
+
+          <div className="nav-actions">
+            <Link to="/profile" className="ghost-btn">
+              Profile
+            </Link>
+          </div>
+        </div>
+
+        <div className="home-grid">
           <div className="hero-panel panel">
-            <h1>Start a new mock draft</h1>
-            <p className="subtle">
-              Choose one, several, or all teams. Then choose how many rounds to simulate.
-            </p>
+            <div className="selector-header">
+              <div>
+                <h1 style={{ marginBottom: '6px' }}>Start a new mock draft</h1>
+                <p className="subtle" style={{ margin: 0 }}>
+                  Choose one, several, or all teams. Then choose how many rounds to simulate.
+                </p>
+              </div>
+
+              <div className="inline-row">
+                <Link to="/profile" className="selector-action">
+                  Open Profile
+                </Link>
+              </div>
+            </div>
 
             <div style={{ marginTop: '24px' }}>
               <div className="selector-header">
@@ -148,6 +184,7 @@ export default function HomePage() {
                   <h2 className="selector-title">Choose teams</h2>
                   <p className="subtle">You can select one, multiple, or all teams.</p>
                 </div>
+
                 <button
                   type="button"
                   className={`selector-action ${allTeamsSelected ? 'active' : ''}`}
@@ -197,6 +234,7 @@ export default function HomePage() {
                   <h2 className="selector-title">Choose rounds</h2>
                   <p className="subtle">Select a range or simulate the full draft.</p>
                 </div>
+
                 <button
                   type="button"
                   className={`selector-action ${rounds === 'ALL' ? 'active' : ''}`}
@@ -226,13 +264,15 @@ export default function HomePage() {
 
             <div className="inline-row" style={{ marginTop: '24px' }}>
               <button
+                type="button"
                 className="primary-btn"
                 onClick={handleStartDraft}
                 disabled={starting || selectedTeams.length === 0 || !rounds}
               >
                 {starting ? 'Starting...' : 'Start Draft'}
               </button>
-              {error && <span className="error-text">{error}</span>}
+
+              {error ? <span className="error-text">{error}</span> : null}
             </div>
 
             <div className="quick-stats">
@@ -246,9 +286,55 @@ export default function HomePage() {
                     : selectedTeams.length}
                 </div>
               </div>
+
               <div className="stat-card">
                 <div className="stat-label">Rounds loaded</div>
                 <div className="stat-value">{roundLabel}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="side-panel panel">
+            <div className="selector-header">
+              <div>
+                <h3 className="selector-title">Welcome back</h3>
+                <div className="subtle">Your draft profile at a glance.</div>
+              </div>
+            </div>
+
+            <div className="selection-grid">
+              <div>
+                <div className="stat-label">Signed in as</div>
+                <div className="stat-value">{displayUsername}</div>
+              </div>
+
+              <div>
+                <div className="stat-label">Email</div>
+                <div className="subtle">{user?.email || '—'}</div>
+              </div>
+
+              <div>
+                <div className="stat-label">Current team setup</div>
+                <div className="subtle">{selectedTeamLabel}</div>
+              </div>
+
+              <div>
+                <div className="stat-label">Current round setup</div>
+                <div className="subtle">{roundLabel}</div>
+              </div>
+            </div>
+
+            <div className="inline-row" style={{ marginTop: '20px' }}>
+              <Link to="/profile" className="selector-action">
+                Go to Profile
+              </Link>
+            </div>
+
+            <div className="panel" style={{ marginTop: '18px', padding: '16px' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '10px' }}>What’s next</h3>
+              <div className="subtle">
+                Profile is now your home for saved drafts, group membership, and account settings.
+                Next up: group creation, joining groups, and sharing completed drafts.
               </div>
             </div>
           </div>
