@@ -94,10 +94,9 @@ export default function DraftPage() {
     return buildDraftBoard(mockDraft.rounds);
   }, [mockDraft]);
 
-  const draftedPlayerIds = useMemo(
-    () => new Set((mockDraft?.picks ?? []).map((pick) => pick.playerId)),
-    [mockDraft]
-  );
+  const draftedPlayerIds = useMemo(() => {
+    return new Set((mockDraft?.picks ?? []).map((pick) => pick.playerId));
+  }, [mockDraft]);
 
   const availablePlayers = useMemo(() => {
     const lowerSearch = search.trim().toLowerCase();
@@ -107,6 +106,7 @@ export default function DraftPage() {
       .filter((player) => positionFilter === 'ALL' || player.position === positionFilter)
       .filter((player) => {
         if (!lowerSearch) return true;
+
         return (
           player.fullName.toLowerCase().includes(lowerSearch) ||
           player.school.toLowerCase().includes(lowerSearch) ||
