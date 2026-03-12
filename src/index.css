@@ -890,11 +890,11 @@ img {
 }
 .draft-board-title-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: 8px;
   min-height: 0;
   line-height: 1;
+  align-content: center
 }
 
 .round-selector-wrap {
