@@ -226,6 +226,14 @@ function GroupsListCard({ groups }) {
               <div className="subtle" style={{ marginTop: '12px' }}>
                 {group.description?.trim() ? group.description : 'No description yet.'}
               </div>
+
+              <div className="player-actions">
+                <div className="inline-row">
+                  <Link to={`/groups/${group.id}`} className="selector-action">
+                    Open Group
+                  </Link>
+                </div>
+              </div>
             </div>
           ))}
         </div>

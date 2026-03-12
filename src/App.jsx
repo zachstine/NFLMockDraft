@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import DraftPage from './pages/DraftPage';
 import ProfilePage from './pages/ProfilePage';
+import GroupPage from './pages/GroupPage';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -50,6 +51,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ProfilePage theme={theme} setTheme={setTheme} />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/groups/:groupId"
+          element={
+            <ProtectedRoute>
+              <GroupPage theme={theme} setTheme={setTheme} />
             </ProtectedRoute>
           }
         />
