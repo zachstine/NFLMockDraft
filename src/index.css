@@ -720,7 +720,7 @@ button {
 .player-list-header {
   display: grid;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 22px;
 }
 
 .player-list-title {
@@ -728,11 +728,14 @@ button {
   color: var(--text);
 }
 
-.remaining-picks-row {
+
+  .remaining-picks-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 6px;
+  margin-bottom: 6px;
 }
 
 .remaining-picks-label {
