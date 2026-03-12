@@ -10,7 +10,7 @@ import {
   makeDraftPick,
 } from '../services/draftService';
 import { draftCapital2026 } from '../data/draftCapital2026';
-import { teams } from '../data/teams';
+import teams from '../data/teams';
 
 function getShortTeamName(teamName = '') {
   const parts = teamName.trim().split(' ');

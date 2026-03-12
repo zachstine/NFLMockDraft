@@ -24,8 +24,7 @@ export default function DraftBoard({ board, picks }) {
   return (
     <div className="panel scroll-panel">
       <h3>Draft Board</h3>
-      <p className="subtle">Every pick stays on the board as the draft moves forward.</p>
-
+      
       <div className="pick-list">
         {board.map((slot) => (
           <PickItem key={slot.overall} slot={slot} pick={picksByOverall.get(slot.overall)} />
