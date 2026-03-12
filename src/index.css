@@ -408,7 +408,7 @@ img {
 
 .draft-board-header {
   display: grid;
-  gap: 12px;
+  gap: 6px;
   margin-bottom: 14px;
   flex: 0 0 auto;
 }
