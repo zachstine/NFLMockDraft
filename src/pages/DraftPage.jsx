@@ -159,7 +159,27 @@ export default function DraftPage() {
   const completedPicks = mockDraft.picks?.length ?? 0;
   const totalPicks = board.length;
   const remainingPicks = Math.max(totalPicks - completedPicks, 0);
-  const positionOptions = ['ALL', ...new Set(players.map((player) => player.position))].sort();
+  const POSITION_ORDER = [
+  'ALL',
+  'QB',
+  'RB',
+  'WR',
+  'TE',
+  'OT',
+  'OG',
+  'C',
+  'EDGE',
+  'DT',
+  'LB',
+  'CB',
+  'S',
+  'K',
+  'P',
+];
+
+const positionOptions = POSITION_ORDER.filter(
+  (position) => position === 'ALL' || players.some((player) => player.position === position)
+);
 
   const activeTeamAbbr = currentSlot?.team ?? null;
   const activeTeam = NFL_TEAMS.find((team) => team.abbr === activeTeamAbbr) ?? null;
