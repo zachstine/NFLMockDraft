@@ -11,20 +11,31 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
 
-  const [selectedTeam, setSelectedTeam] = useState('');
+  const [selectedTeams, setSelectedTeams] = useState([]);
   const [rounds, setRounds] = useState('');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
+
+  const allTeamsSelected = selectedTeams.length === NFL_TEAMS.length;
 
   const roundLabel = useMemo(() => {
     if (!rounds) return 'None';
     return rounds === 'ALL' ? '1-7' : `1-${rounds}`;
   }, [rounds]);
 
-  const picksInRun = useMemo(() => {
-    if (!rounds) return 0;
-    return (rounds === 'ALL' ? 7 : Number(rounds)) * 32;
-  }, [rounds]);
+  function toggleTeam(teamAbbr) {
+    setSelectedTeams((prev) =>
+      prev.includes(teamAbbr)
+        ? prev.filter((abbr) => abbr !== teamAbbr)
+        : [...prev, teamAbbr]
+    );
+  }
+
+  function handleSelectAllTeams() {
+    setSelectedTeams((prev) =>
+      prev.length === NFL_TEAMS.length ? [] : NFL_TEAMS.map((team) => team.abbr)
+    );
+  }
 
   async function handleStartDraft() {
     setStarting(true);
@@ -35,8 +46,8 @@ export default function HomePage() {
         throw new Error('You must be logged in to start a draft.');
       }
 
-      if (!selectedTeam) {
-        throw new Error('Select a team or choose Select All.');
+      if (selectedTeams.length === 0) {
+        throw new Error('Select at least one team or choose Select All.');
       }
 
       if (!rounds) {
@@ -46,7 +57,7 @@ export default function HomePage() {
       console.log('Starting draft with:', {
         uid: user?.uid,
         username: profile?.username,
-        selectedTeam,
+        selectedTeams,
         rounds: rounds === 'ALL' ? 7 : Number(rounds),
         year: '2026',
       });
@@ -54,7 +65,13 @@ export default function HomePage() {
       const mockId = await createMockDraft({
         ownerUid: user.uid,
         username: profile?.username ?? 'GM',
-        selectedTeam,
+        selectedTeams,
+        selectedTeam:
+          selectedTeams.length === NFL_TEAMS.length
+            ? 'ALL'
+            : selectedTeams.length === 1
+            ? selectedTeams[0]
+            : 'MULTI',
         rounds: rounds === 'ALL' ? 7 : Number(rounds),
         year: '2026',
       });
@@ -73,46 +90,45 @@ export default function HomePage() {
       <div className="page">
         <TopNav />
 
-        <div className="home-grid">
+        <div className="home-grid single-column">
           <div className="hero-panel panel">
             <h1>Start a new mock draft</h1>
             <p className="subtle">
-              Pick one franchise or run the whole board. Choose your team first, then choose how many rounds to simulate.
+              Choose one, several, or all teams. Then choose how many rounds to simulate.
             </p>
 
             <div style={{ marginTop: '24px' }}>
               <div className="selector-header">
                 <div>
-                  <h2 className="selector-title">Choose your team</h2>
-                  <p className="subtle">No team is selected by default.</p>
+                  <h2 className="selector-title">Choose teams</h2>
+                  <p className="subtle">You can select one, multiple, or all teams.</p>
                 </div>
                 <button
                   type="button"
-                  className={`selector-action ${selectedTeam === 'ALL' ? 'active' : ''}`}
-                  onClick={() => setSelectedTeam('ALL')}
+                  className={`selector-action ${allTeamsSelected ? 'active' : ''}`}
+                  onClick={handleSelectAllTeams}
                 >
-                  Select All
+                  {allTeamsSelected ? 'Clear All' : 'Select All'}
                 </button>
               </div>
 
-              <div className="team-grid">
+              <div className="team-grid team-grid-8">
                 {NFL_TEAMS.map((team) => {
-                  const isActive = selectedTeam === team.abbr;
+                  const isActive = selectedTeams.includes(team.abbr);
 
                   return (
                     <button
                       key={team.abbr}
                       type="button"
-                      className={`team-card ${isActive ? 'active' : ''}`}
-                      onClick={() => setSelectedTeam(team.abbr)}
+                      className={`team-card compact ${isActive ? 'active' : ''}`}
+                      onClick={() => toggleTeam(team.abbr)}
                     >
                       <img
                         src={team.logo}
-                        alt={`${team.city} ${team.name} logo`}
-                        className="team-logo"
+                        alt={`${team.name} logo`}
+                        className="team-logo compact"
                       />
-                      <span className="team-name">{team.city} {team.name}</span>
-                      <span className="team-abbr">{team.abbr}</span>
+                      <span className="team-name compact">{team.name}</span>
                     </button>
                   );
                 })}
@@ -128,9 +144,9 @@ export default function HomePage() {
                 <button
                   type="button"
                   className={`selector-action ${rounds === 'ALL' ? 'active' : ''}`}
-                  onClick={() => setRounds('ALL')}
+                  onClick={() => setRounds(rounds === 'ALL' ? '' : 'ALL')}
                 >
-                  Select All
+                  {rounds === 'ALL' ? 'Clear' : 'Select All'}
                 </button>
               </div>
 
@@ -156,7 +172,7 @@ export default function HomePage() {
               <button
                 className="primary-btn"
                 onClick={handleStartDraft}
-                disabled={starting || !selectedTeam || !rounds}
+                disabled={starting || selectedTeams.length === 0 || !rounds}
               >
                 {starting ? 'Starting...' : 'Start Draft'}
               </button>
@@ -165,43 +181,20 @@ export default function HomePage() {
 
             <div className="quick-stats">
               <div className="stat-card">
-                <div className="stat-label">Mode</div>
+                <div className="stat-label">Teams selected</div>
                 <div className="stat-value">
-                  {!selectedTeam
-                    ? 'Not selected'
-                    : selectedTeam === 'ALL'
-                    ? 'League-wide'
-                    : `${selectedTeam} focus`}
+                  {selectedTeams.length === 0
+                    ? 'None'
+                    : allTeamsSelected
+                    ? 'All 32'
+                    : selectedTeams.length}
                 </div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">Rounds loaded</div>
                 <div className="stat-value">{roundLabel}</div>
               </div>
-              <div className="stat-card">
-                <div className="stat-label">Picks in run</div>
-                <div className="stat-value">{picksInRun}</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-label">Draft year</div>
-                <div className="stat-value">2026</div>
-              </div>
             </div>
-          </div>
-
-          <div className="side-panel panel">
-            <h2>Starter notes</h2>
-            <p className="subtle">
-              This version swaps dropdowns for visual selectors so the pre-draft page feels more like a real draft hub.
-            </p>
-
-            <ul className="subtle" style={{ paddingLeft: '20px' }}>
-              <li>Clickable team logo cards</li>
-              <li>No default team selection</li>
-              <li>Round boxes for 1 through 7</li>
-              <li>Select All for teams and rounds</li>
-              <li>Start button disabled until both are chosen</li>
-            </ul>
           </div>
         </div>
       </div>
