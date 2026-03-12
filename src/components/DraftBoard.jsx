@@ -30,6 +30,7 @@ function PickItem({ slot, pick, isCurrent }) {
       ) : null}
 
       <div className="draft-slot-upcoming-label">Upcoming Picks</div>
+
       <div className="draft-slot-upcoming-list">
         {remainingPicks.length > 0 ? (
           remainingPicks.map((pickNumber) => (
@@ -54,7 +55,7 @@ function PickItem({ slot, pick, isCurrent }) {
       <div className="inline-row" style={{ marginTop: '10px' }}>
         <span className="position-pill">{pick ? pick.position : '—'}</span>
         <span className="badge">{pick ? pick.school : 'Waiting'}</span>
-        {pick?.isAuto && <span className="badge">Auto</span>}
+        {pick?.isAuto ? <span className="badge">Auto</span> : null}
       </div>
     </div>
   );
@@ -67,12 +68,12 @@ export default function DraftBoard({
   selectedRound,
   onRoundChange,
 }) {
+  const scrollPanelRef = useRef(null);
+
   const picksByOverall = useMemo(
     () => new Map(picks.map((pick) => [pick.overallPick, pick])),
     [picks]
   );
-
-  const scrollPanelRef = useRef(null);
 
   const availableRounds = useMemo(
     () => [...new Set(board.map((slot) => slot.round))].sort((a, b) => a - b),
@@ -101,8 +102,10 @@ export default function DraftBoard({
     const targetTopWithinPanel =
       targetRect.top - panelRect.top + panel.scrollTop;
 
+    const desiredViewportPosition = panel.clientHeight * 0.75;
+
     const targetScrollTop =
-      targetTopWithinPanel - panel.clientHeight / 2 + targetRect.height / 2;
+      targetTopWithinPanel - desiredViewportPosition + targetRect.height / 2;
 
     panel.scrollTo({
       top: Math.max(0, targetScrollTop),
