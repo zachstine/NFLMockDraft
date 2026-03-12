@@ -622,56 +622,6 @@ button {
   align-items: center;
 }
 
-.draft-side-team-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 10px;
-}
-
-.draft-side-team-name {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text);
-}
-
-.draft-side-team-logo {
-  width: 78px;
-  height: 78px;
-  object-fit: contain;
-}
-
-.draft-side-team-label {
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.draft-side-team-picks {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.draft-side-pick-chip {
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: var(--chip-bg);
-  color: var(--text);
-  font-weight: 700;
-  font-size: 0.9rem;
-  border: 1px solid transparent;
-}
-
-.draft-side-pick-chip.next-pick {
-  color: var(--next-pick);
-  border: 1px solid var(--next-pick);
-  box-shadow: 0 0 8px var(--next-pick-shadow);
-}
 
 .draft-slot-logo {
   width: 42px;
@@ -766,4 +716,49 @@ button {
   .quick-stats {
     grid-template-columns: 1fr;
   }
+}
+.player-list-header {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.player-list-title {
+  margin: 0;
+  color: var(--text);
+}
+
+.remaining-picks-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.remaining-picks-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.remaining-picks-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.remaining-pick-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--chip-bg);
+  border: 1px solid transparent;
+}
+
+.remaining-pick-chip.next {
+  color: var(--next-pick);
+  border: 1px solid var(--next-pick);
+  box-shadow: 0 0 8px var(--next-pick-shadow);
 }

@@ -4,6 +4,9 @@ export default function PlayerList({
   canUserPick,
   onPick,
   loading,
+  activeTeam,
+  upcomingPicks = [],
+  nextUpcomingPick = null,
 }) {
   return (
     <div className="panel scroll-panel">
@@ -12,13 +15,36 @@ export default function PlayerList({
           <h3>Available Players</h3>
           <p className="subtle">
             {currentSlot
-              ? `On the clock: ${currentSlot.team} at #${currentSlot.overall}`
+              ? `On the clock: ${activeTeam?.name ?? currentSlot.team} at #${currentSlot.overall}`
               : 'Draft complete'}
           </p>
+
+          {currentSlot && (
+            <div className="remaining-picks-row">
+              <span className="remaining-picks-label">Remaining Picks:</span>
+              <div className="remaining-picks-list">
+                {upcomingPicks.length > 0 ? (
+                  upcomingPicks.map((pickNumber) => (
+                    <span
+                      key={pickNumber}
+                      className={`remaining-pick-chip ${
+                        pickNumber === nextUpcomingPick ? 'next' : ''
+                      }`}
+                    >
+                      {pickNumber}
+                    </span>
+                  ))
+                ) : (
+                  <span className="subtle">No remaining picks</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+
         <div className="inline-row">
           {currentSlot && <span className="round-pill">Round {currentSlot.round}</span>}
-          {currentSlot && <span className="team-pill">{currentSlot.team}</span>}
+          {currentSlot && <span className="team-pill">{activeTeam?.name ?? currentSlot.team}</span>}
         </div>
       </div>
 

@@ -195,37 +195,6 @@ export default function DraftPage() {
           <DraftBoard board={board} picks={mockDraft.picks ?? []} />
 
           <div>
-            <div className="panel draft-side-team-panel" style={{ marginBottom: '18px' }}>
-              <div className="draft-side-team-name">{activeTeamName}</div>
-
-              {activeTeam?.logo ? (
-                <img
-                  className="draft-side-team-logo"
-                  src={activeTeam.logo}
-                  alt={activeTeam.name}
-                />
-              ) : null}
-
-              <div className="draft-side-team-label">Upcoming Picks</div>
-
-              <div className="draft-side-team-picks">
-                {upcomingPicks.length > 0 ? (
-                  upcomingPicks.map((pickNumber) => (
-                    <span
-                      key={pickNumber}
-                      className={`draft-side-pick-chip ${
-                        pickNumber === nextUpcomingPick ? 'next-pick' : ''
-                      }`}
-                    >
-                      {pickNumber}
-                    </span>
-                  ))
-                ) : (
-                  <span className="subtle">No remaining picks</span>
-                )}
-              </div>
-            </div>
-
             <div className="panel" style={{ marginBottom: '18px' }}>
               <div className="toolbar">
                 <div className="toolbar-top">
