@@ -284,14 +284,17 @@ export default function ProfilePage() {
         setDrafts(sortByNewest(draftRows, 'updatedAt'));
         setGroups(sortByNewest(groupRows, 'createdAt'));
       } catch (error) {
-        console.error('[profile-page] failed to load profile data', error);
-        if (isMounted) {
-          setPageError('Failed to load profile data.');
-          setProfile(null);
-          setDrafts([]);
-          setGroups([]);
-        }
-      } finally {
+  console.error('[profile-page] failed to load profile data', error);
+  console.error('[profile-page] error code:', error?.code);
+  console.error('[profile-page] error message:', error?.message);
+
+  if (isMounted) {
+    setPageError(error?.message || 'Failed to load profile data.');
+    setProfile(null);
+    setDrafts([]);
+    setGroups([]);
+  }
+} finally {
         if (isMounted) {
           setLoading(false);
         }
