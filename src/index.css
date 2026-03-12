@@ -901,14 +901,14 @@ img {
   flex-direction: column;
   gap: 6px;
   align-self: flex-start;
-  margin-top: 2px;
+  margin-top: 0;
   margin-left: 2px;
   padding: 8px 10px 10px;
   border: 1px solid var(--border-light);
   border-radius: 14px;
   background: var(--panel-solid);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
-  transform: translateY(4px);
+  transform: translateY(0);
   z-index: 2;
 }
 
