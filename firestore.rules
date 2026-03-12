@@ -9,34 +9,34 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    match /users/{uid} {
-      allow create: if isOwner(uid)
-        && request.resource.data.uid == request.auth.uid;
-      allow read, update, delete: if isOwner(uid);
+    match /users/{userId} {
+      allow read, create, update: if isOwner(userId);
+      allow delete: if false;
     }
 
-    match /usernames/{username} {
-      allow create: if isSignedIn()
-        && request.resource.data.uid == request.auth.uid;
-      allow read: if true;
-      allow update, delete: if false;
+    match /drafts/{draftId} {
+      allow create: if isSignedIn();
+
+      allow read: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid
+      );
+
+      allow update, delete: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid
+      );
     }
 
-    match /mocks/{mockId} {
-      allow create: if isSignedIn()
-        && request.resource.data.ownerUid == request.auth.uid;
-      allow read, update, delete: if isSignedIn()
-        && resource.data.ownerUid == request.auth.uid;
-    }
+    match /groups/{groupId} {
+      allow create: if isSignedIn();
 
-    match /mocks/{mockId}/picks/{pickId} {
-      allow read, write: if isSignedIn()
-        && get(/databases/$(database)/documents/mocks/$(mockId)).data.ownerUid == request.auth.uid;
-    }
+      allow read: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        request.auth.uid in resource.data.memberUids
+      );
 
-    match /draftClasses/{year}/players/{playerId} {
-      allow read: if true;
-      allow write: if false;
+      allow update, delete: if isSignedIn() && (
+        resource.data.ownerUid == request.auth.uid
+      );
     }
   }
 }
