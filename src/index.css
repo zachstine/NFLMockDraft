@@ -977,3 +977,17 @@ img {
     flex: 1 1 auto;
   }
 }
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 1200;
+}
+
+.profile-modal {
+  width: min(560px, 100%);
+  padding: 20px;
+}
