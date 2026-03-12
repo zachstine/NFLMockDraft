@@ -409,7 +409,7 @@ img {
 .draft-board-header {
   display: grid;
   gap: 6px;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
   flex: 0 0 auto;
 }
 
