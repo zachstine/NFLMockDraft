@@ -17,7 +17,7 @@ service cloud.firestore {
     }
 
     match /drafts/{draftId} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow create: if signedIn();
 
       allow read: if signedIn();
 
@@ -25,13 +25,9 @@ service cloud.firestore {
     }
 
     match /groups/{groupId} {
-      allow create: if signedIn()
-        && request.resource.data.ownerUid == request.auth.uid;
-
+      allow create: if signedIn();
       allow read: if signedIn();
-
       allow update: if signedIn();
-
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
     }
   }
