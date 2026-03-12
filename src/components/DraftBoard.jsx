@@ -75,7 +75,7 @@ export default function DraftBoard({
   const scrollPanelRef = useRef(null);
 
   const availableRounds = useMemo(
-    () => [...new Set(board.map((slot) => slot.round))],
+    () => [...new Set(board.map((slot) => slot.round))].sort((a, b) => a - b),
     [board]
   );
 
@@ -113,27 +113,33 @@ export default function DraftBoard({
   return (
     <div className="panel scroll-panel">
       <div className="draft-board-header">
-        <h3>Draft Board</h3>
+        <div className="draft-board-title-row">
+          <h3>Draft Board</h3>
+        </div>
 
-        <div className="round-filter-row">
-          <button
-            type="button"
-            className={`round-filter-btn ${selectedRound === 'ALL' ? 'active' : ''}`}
-            onClick={() => onRoundChange('ALL')}
-          >
-            All Rounds
-          </button>
+        <div className="round-selector-wrap">
+          <div className="round-selector-label">Round</div>
 
-          {availableRounds.map((round) => (
+          <div className="round-selector">
             <button
               type="button"
-              key={round}
-              className={`round-filter-btn ${selectedRound === round ? 'active' : ''}`}
-              onClick={() => onRoundChange(round)}
+              className={`round-selector-btn ${selectedRound === 'ALL' ? 'active' : ''}`}
+              onClick={() => onRoundChange('ALL')}
             >
-              Round {round}
+              All
             </button>
-          ))}
+
+            {availableRounds.map((round) => (
+              <button
+                type="button"
+                key={round}
+                className={`round-selector-btn ${selectedRound === round ? 'active' : ''}`}
+                onClick={() => onRoundChange(round)}
+              >
+                {round}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
