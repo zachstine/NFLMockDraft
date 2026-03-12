@@ -111,7 +111,7 @@ export default function DraftBoard({
   }, [currentOverallPick, selectedRound, visibleBoard]);
 
   return (
-    <div className="panel scroll-panel">
+    <div className="panel draft-board-panel">
       <div className="draft-board-header">
         <div className="draft-board-title-row">
           <h3>Draft Board</h3>

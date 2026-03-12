@@ -398,7 +398,7 @@ img {
   padding: 18px;
 }
 
-.scroll-panel {
+.draft-board-panel {
   max-height: calc(100vh - 180px);
   min-height: 600px;
   overflow: hidden;
@@ -841,9 +841,10 @@ img {
   }
 
   .scroll-panel {
-    max-height: none;
-    overflow: visible;
-  }
+  max-height: calc(100vh - 180px);
+  min-height: 600px;
+  overflow-y: auto;
+}
 
   .pick-list {
     overflow-y: visible;
