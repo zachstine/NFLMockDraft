@@ -11,13 +11,17 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, create, update: if isSelf(userId);
+      allow read: if signedIn();
+      allow create, update: if isSelf(userId);
       allow delete: if false;
     }
 
     match /drafts/{draftId} {
       allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow read, update, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      allow read: if signedIn();
+
+      allow update, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
     match /groups/{groupId} {
