@@ -10,12 +10,7 @@ import {
   makeDraftPick,
 } from '../services/draftService';
 import { draftCapital2026 } from '../data/draftCapital2026';
-import teams from '../data/teams';
-
-function getShortTeamName(teamName = '') {
-  const parts = teamName.trim().split(' ');
-  return parts[parts.length - 1] || teamName;
-}
+import { NFL_TEAMS } from '../data/teams';
 
 function getUpcomingPicks(teamAbbr, completedPicks) {
   const allPicks = draftCapital2026[teamAbbr] || [];
@@ -168,8 +163,8 @@ export default function DraftPage() {
   const positionOptions = ['ALL', ...new Set(players.map((player) => player.position))].sort();
 
   const activeTeamAbbr = currentSlot?.team ?? null;
-  const activeTeam = teams.find((team) => team.abbr === activeTeamAbbr) ?? null;
-  const activeTeamName = activeTeam ? getShortTeamName(activeTeam.name) : activeTeamAbbr ?? '';
+  const activeTeam = NFL_TEAMS.find((team) => team.abbr === activeTeamAbbr) ?? null;
+  const activeTeamName = activeTeam?.name ?? activeTeamAbbr ?? '';
   const upcomingPicks = activeTeamAbbr
     ? getUpcomingPicks(activeTeamAbbr, completedPicks)
     : [];
