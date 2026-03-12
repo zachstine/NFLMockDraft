@@ -12,16 +12,25 @@ function usernameToEmail(username) {
 
 export async function signupWithUsername(username, password) {
   const email = usernameToEmail(username);
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-  await setDoc(doc(db, "users", cred.user.uid), {
-    uid: cred.user.uid,
-    username: username.trim(),
-    email,
-    createdAt: serverTimestamp(),
-  });
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-  return cred.user;
+    console.log("Auth user created:", cred.user.uid);
+
+    await setDoc(doc(db, "users", cred.user.uid), {
+      uid: cred.user.uid,
+      username: username.trim(),
+      email,
+      createdAt: serverTimestamp(),
+    });
+
+    console.log("Firestore user doc created");
+    return cred.user;
+  } catch (err) {
+    console.error("Signup failed:", err);
+    throw err;
+  }
 }
 
 export async function loginWithUsername(username, password) {
