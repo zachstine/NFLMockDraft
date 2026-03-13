@@ -20,19 +20,24 @@ export default function LoginPage() {
   }, [user, navigate, location.state]);
 
   function updateField(event) {
-    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (submitting) return;
+
+    const trimmedUsername = form.username.trim();
+
     setError('');
     setSubmitting(true);
 
     try {
       if (mode === 'signup') {
-        await signUpWithUsername(form.username, form.password);
+        await signUpWithUsername(trimmedUsername, form.password);
       } else {
-        await logInWithUsername(form.username, form.password);
+        await logInWithUsername(trimmedUsername, form.password);
       }
       navigate('/', { replace: true });
     } catch (submitError) {
@@ -56,10 +61,18 @@ export default function LoginPage() {
             <input
               id="username"
               name="username"
+              type="text"
               autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
+              enterKeyHint="next"
               value={form.username}
               onChange={updateField}
               placeholder="Choose a GM username"
+              pattern="[A-Za-z0-9_]+"
+              title="Use letters, numbers, or underscores only."
               required
             />
           </div>
@@ -71,6 +84,11 @@ export default function LoginPage() {
               name="password"
               type="password"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
+              enterKeyHint={mode === 'signup' ? 'done' : 'go'}
               value={form.password}
               onChange={updateField}
               placeholder="Enter your password"
@@ -96,6 +114,7 @@ export default function LoginPage() {
             onClick={() => {
               setMode((current) => (current === 'login' ? 'signup' : 'login'));
               setError('');
+              setForm({ username: '', password: '' });
             }}
           >
             {mode === 'signup' ? 'Switch to login' : 'Switch to sign up'}

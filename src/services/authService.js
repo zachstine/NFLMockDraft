@@ -13,7 +13,10 @@ import {
 import { auth, db } from '../lib/firebase';
 
 function normalizeUsername(username) {
-  return username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  return String(username || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '');
 }
 
 function usernameToSyntheticEmail(username) {
@@ -25,7 +28,7 @@ export function getNormalizedUsername(username) {
 }
 
 export async function signUpWithUsername(username, password) {
-  const cleanedUsername = username.trim();
+  const cleanedUsername = String(username || '').trim();
   const normalized = normalizeUsername(cleanedUsername);
 
   if (normalized.length < 3) {
@@ -81,13 +84,14 @@ export async function signUpWithUsername(username, password) {
 }
 
 export async function logInWithUsername(username, password) {
-  const normalized = normalizeUsername(username);
+  const cleanedUsername = String(username || '').trim();
+  const normalized = normalizeUsername(cleanedUsername);
 
   if (!normalized) {
     throw new Error('Enter a valid username.');
   }
 
-  const syntheticEmail = usernameToSyntheticEmail(username);
+  const syntheticEmail = usernameToSyntheticEmail(cleanedUsername);
   const credentials = await signInWithEmailAndPassword(auth, syntheticEmail, password);
   return credentials.user;
 }
