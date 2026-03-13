@@ -10,6 +10,7 @@ import {
   increment,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore';
@@ -165,7 +166,7 @@ function ProfileStatCard({ label, value, sublabel }) {
   );
 }
 
-function DraftListCard({ drafts }) {
+function DraftListCard({ drafts, onShareDraft }) {
   return (
     <div className="panel">
       <div className="selector-header">
@@ -210,6 +211,13 @@ function DraftListCard({ drafts }) {
                   <Link to={`/draft/${draft.id}`} className="selector-action">
                     Open Draft
                   </Link>
+                  <button
+                    type="button"
+                    className="selector-action"
+                    onClick={() => onShareDraft(draft)}
+                  >
+                    Share to Group
+                  </button>
                 </div>
               </div>
             </div>
@@ -286,10 +294,12 @@ export default function ProfilePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+  const [showShareDraftModal, setShowShareDraftModal] = useState(false);
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [joiningGroup, setJoiningGroup] = useState(false);
+  const [sharingDraft, setSharingDraft] = useState(false);
 
   const [editUsername, setEditUsername] = useState('');
   const [editFavoriteTeam, setEditFavoriteTeam] = useState('');
@@ -298,6 +308,9 @@ export default function ProfilePage() {
   const [groupName, setGroupName] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
   const [joinCode, setJoinCode] = useState('');
+
+  const [draftToShare, setDraftToShare] = useState(null);
+  const [shareTargetGroupId, setShareTargetGroupId] = useState('');
 
   async function loadProfilePageData(currentUser) {
     if (!currentUser?.uid) {
@@ -401,6 +414,14 @@ export default function ProfilePage() {
     setActionSuccess('');
     setJoinCode('');
     setShowJoinGroupModal(true);
+  }
+
+  function openShareDraftModal(draft) {
+    setActionError('');
+    setActionSuccess('');
+    setDraftToShare(draft);
+    setShareTargetGroupId(groups[0]?.id || '');
+    setShowShareDraftModal(true);
   }
 
   async function handleSaveProfile(event) {
@@ -534,6 +555,76 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleShareDraft(event) {
+    event.preventDefault();
+
+    if (!user?.uid) {
+      setActionError('You must be signed in to share a draft.');
+      return;
+    }
+
+    if (!draftToShare?.id) {
+      setActionError('No draft selected to share.');
+      return;
+    }
+
+    if (!shareTargetGroupId) {
+      setActionError('Select a group to share this draft to.');
+      return;
+    }
+
+    const targetGroup = groups.find((group) => group.id === shareTargetGroupId);
+    if (!targetGroup) {
+      setActionError('Selected group was not found.');
+      return;
+    }
+
+    setSharingDraft(true);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      const sharedDraftRef = doc(db, 'groups', shareTargetGroupId, 'sharedMocks', draftToShare.id);
+
+      await setDoc(sharedDraftRef, {
+        groupId: shareTargetGroupId,
+        sourceMockId: draftToShare.id,
+        ownerUid: draftToShare.ownerUid || user.uid,
+        ownerUsername: draftToShare.username || displayUsername,
+        title: getDraftTitle(draftToShare),
+        selectedTeam: draftToShare.selectedTeam || '',
+        selectedTeams: Array.isArray(draftToShare.selectedTeams)
+          ? draftToShare.selectedTeams
+          : [],
+        rounds: draftToShare.rounds || 7,
+        year: draftToShare.year || '2026',
+        status: draftToShare.status || 'active',
+        picks: Array.isArray(draftToShare.picks) ? draftToShare.picks : [],
+        pickCount: Array.isArray(draftToShare.picks) ? draftToShare.picks.length : 0,
+        currentPickIndex:
+          typeof draftToShare.currentPickIndex === 'number'
+            ? draftToShare.currentPickIndex
+            : 0,
+        createdAt: draftToShare.createdAt || serverTimestamp(),
+        updatedAt: draftToShare.updatedAt || serverTimestamp(),
+        sharedAt: serverTimestamp(),
+        sharedByUid: user.uid,
+        sharedByUsername: displayUsername,
+        groupName: targetGroup.name || '',
+      });
+
+      setActionSuccess(`Shared ${getDraftTitle(draftToShare)} to ${targetGroup.name}.`);
+      setShowShareDraftModal(false);
+      setDraftToShare(null);
+      setShareTargetGroupId('');
+    } catch (error) {
+      console.error('[profile-page] share draft failed', error);
+      setActionError(error?.message || 'Could not share draft.');
+    } finally {
+      setSharingDraft(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="app-shell">
@@ -649,7 +740,7 @@ export default function ProfilePage() {
           className="draft-layout"
           style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginTop: '18px' }}
         >
-          <DraftListCard drafts={drafts} />
+          <DraftListCard drafts={drafts} onShareDraft={openShareDraftModal} />
           <GroupsListCard groups={groups} />
         </div>
 
@@ -745,6 +836,52 @@ export default function ProfilePage() {
                   {joiningGroup ? 'Joining...' : 'Join Group'}
                 </button>
               </div>
+            </form>
+          </ModalShell>
+        ) : null}
+
+        {showShareDraftModal ? (
+          <ModalShell title="Share Draft to Group" onClose={() => setShowShareDraftModal(false)}>
+            <form className="form-grid" onSubmit={handleShareDraft}>
+              <div className="field">
+                <label>Draft</label>
+                <input value={getDraftTitle(draftToShare)} disabled />
+              </div>
+
+              <div className="field">
+                <label htmlFor="share-target-group">Group</label>
+                <select
+                  id="share-target-group"
+                  value={shareTargetGroupId}
+                  onChange={(event) => setShareTargetGroupId(event.target.value)}
+                >
+                  <option value="">Select a group</option>
+                  {groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="subtle">
+                This shares a snapshot of the current draft to the selected group. Re-sharing the
+                same draft to the same group will update that shared version.
+              </div>
+
+              <div className="inline-row">
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={sharingDraft || groups.length === 0}
+                >
+                  {sharingDraft ? 'Sharing...' : 'Share Draft'}
+                </button>
+              </div>
+
+              {groups.length === 0 ? (
+                <div className="empty-state">Join or create a group before sharing drafts.</div>
+              ) : null}
             </form>
           </ModalShell>
         ) : null}
