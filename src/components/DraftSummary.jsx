@@ -13,11 +13,7 @@ function getTeamMeta(teamAbbr) {
 }
 
 function getPlayerId(pick) {
-  return (
-    pick?.player?.id ||
-    pick?.playerId ||
-    null
-  );
+  return pick?.player?.id || pick?.playerId || null;
 }
 
 function getOverall(pick) {
@@ -32,25 +28,19 @@ function getPickInRound(pick) {
   return pick?.pickInRound ?? pick?.roundPick ?? '—';
 }
 
-function getPlayerName(pick, playerLookup) {
-  const fallbackPlayer = playerLookup.get(getPlayerId(pick));
-
+function getPlayerNameFromPick(pick) {
   return (
     pick?.player?.name ||
     pick?.player?.fullName ||
     pick?.playerName ||
     pick?.fullName ||
     pick?.name ||
-    fallbackPlayer?.fullName ||
-    fallbackPlayer?.name ||
-    'Unknown Player'
+    ''
   );
 }
 
-function getPlayerPosition(pick, playerLookup) {
-  const fallbackPlayer = playerLookup.get(getPlayerId(pick));
-
-  const rawPosition =
+function getPlayerPositionFromPick(pick) {
+  return (
     pick?.player?.position ||
     pick?.playerPosition ||
     pick?.position ||
@@ -60,27 +50,119 @@ function getPlayerPosition(pick, playerLookup) {
     pick?.primaryPosition ||
     pick?.player?.listedPosition ||
     pick?.listedPosition ||
-    fallbackPlayer?.position ||
-    fallbackPlayer?.pos ||
-    fallbackPlayer?.primaryPosition ||
-    '';
-
-  return rawPosition ? String(rawPosition).trim().toUpperCase() : '—';
+    ''
+  );
 }
 
-function getPlayerSchool(pick, playerLookup) {
-  const fallbackPlayer = playerLookup.get(getPlayerId(pick));
-
+function getPlayerSchoolFromPick(pick) {
   return (
     pick?.player?.school ||
     pick?.playerSchool ||
     pick?.school ||
     pick?.player?.college ||
     pick?.college ||
-    fallbackPlayer?.school ||
-    fallbackPlayer?.college ||
-    '—'
+    ''
   );
+}
+
+function mergePickData(primaryPick, fallbackPick, playerLookup) {
+  const primaryId = getPlayerId(primaryPick);
+  const fallbackId = getPlayerId(fallbackPick);
+  const playerId = primaryId || fallbackId || null;
+
+  const playerFromPool = playerLookup.get(playerId);
+
+  const playerName =
+    getPlayerNameFromPick(primaryPick) ||
+    getPlayerNameFromPick(fallbackPick) ||
+    playerFromPool?.fullName ||
+    playerFromPool?.name ||
+    'Unknown Player';
+
+  const playerPosition =
+    getPlayerPositionFromPick(primaryPick) ||
+    getPlayerPositionFromPick(fallbackPick) ||
+    playerFromPool?.position ||
+    playerFromPool?.pos ||
+    playerFromPool?.primaryPosition ||
+    '';
+
+  const playerSchool =
+    getPlayerSchoolFromPick(primaryPick) ||
+    getPlayerSchoolFromPick(fallbackPick) ||
+    playerFromPool?.school ||
+    playerFromPool?.college ||
+    '';
+
+  const overall =
+    primaryPick?.overall ??
+    primaryPick?.overallPick ??
+    fallbackPick?.overall ??
+    fallbackPick?.overallPick ??
+    null;
+
+  const round =
+    primaryPick?.round ??
+    fallbackPick?.round ??
+    null;
+
+  const pickInRound =
+    primaryPick?.pickInRound ??
+    primaryPick?.roundPick ??
+    fallbackPick?.pickInRound ??
+    fallbackPick?.roundPick ??
+    null;
+
+  const team =
+    primaryPick?.team ??
+    fallbackPick?.team ??
+    '';
+
+  const draftedAt =
+    primaryPick?.draftedAt ??
+    fallbackPick?.draftedAt ??
+    null;
+
+  const isAuto =
+    Boolean(primaryPick?.isAuto) || Boolean(fallbackPick?.isAuto);
+
+  return {
+    ...fallbackPick,
+    ...primaryPick,
+    overall,
+    overallPick: overall,
+    round,
+    pickInRound,
+    roundPick: pickInRound,
+    team,
+    playerId,
+    playerName,
+    playerPosition,
+    playerSchool,
+    position: playerPosition,
+    school: playerSchool,
+    draftedAt,
+    isAuto,
+    player: {
+      id: playerId,
+      name: playerName,
+      position: playerPosition,
+      school: playerSchool,
+    },
+  };
+}
+
+function getPlayerName(pick) {
+  return getPlayerNameFromPick(pick) || 'Unknown Player';
+}
+
+function getPlayerPosition(pick) {
+  const rawPosition = getPlayerPositionFromPick(pick);
+  return rawPosition ? String(rawPosition).trim().toUpperCase() : '—';
+}
+
+function getPlayerSchool(pick) {
+  return getPlayerSchoolFromPick(pick) || '—';
 }
 
 function buildTeamBuckets(picks) {
@@ -121,12 +203,12 @@ function buildRoundBuckets(picks) {
     .sort((a, b) => a.round - b.round);
 }
 
-function buildOverview(picks, playerLookup) {
+function buildOverview(picks) {
   const completedPicks = Array.isArray(picks) ? picks.length : 0;
 
   const positionCounts = new Map();
   for (const pick of picks) {
-    const pos = getPlayerPosition(pick, playerLookup);
+    const pos = getPlayerPosition(pick);
     positionCounts.set(pos, (positionCounts.get(pos) || 0) + 1);
   }
 
@@ -140,7 +222,7 @@ function buildOverview(picks, playerLookup) {
   };
 }
 
-function PickRow({ pick, playerLookup }) {
+function PickRow({ pick }) {
   const teamMeta = getTeamMeta(pick.team);
 
   return (
@@ -159,19 +241,19 @@ function PickRow({ pick, playerLookup }) {
         </div>
 
         <div className="draft-summary-player-name">
-          {getPlayerName(pick, playerLookup)}
+          {getPlayerName(pick)}
         </div>
 
         <div className="draft-summary-player-meta">
-          {getPlayerPosition(pick, playerLookup)} • {getPlayerSchool(pick, playerLookup)}
+          {getPlayerPosition(pick)} • {getPlayerSchool(pick)}
         </div>
       </div>
     </div>
   );
 }
 
-function OverviewTab({ picks, playerLookup }) {
-  const overview = useMemo(() => buildOverview(picks, playerLookup), [picks, playerLookup]);
+function OverviewTab({ picks }) {
+  const overview = useMemo(() => buildOverview(picks), [picks]);
 
   return (
     <div className="draft-summary-section">
@@ -204,7 +286,6 @@ function OverviewTab({ picks, playerLookup }) {
             <PickRow
               key={`${getOverall(pick)}-${getPlayerId(pick) || pick?.playerName || index}`}
               pick={pick}
-              playerLookup={playerLookup}
             />
           ))}
         </div>
@@ -213,7 +294,7 @@ function OverviewTab({ picks, playerLookup }) {
   );
 }
 
-function ByTeamTab({ picks, playerLookup }) {
+function ByTeamTab({ picks }) {
   const teamBuckets = useMemo(() => buildTeamBuckets(picks), [picks]);
 
   return (
@@ -233,7 +314,6 @@ function ByTeamTab({ picks, playerLookup }) {
                   <PickRow
                     key={`${bucket.team}-${getOverall(pick)}-${index}`}
                     pick={pick}
-                    playerLookup={playerLookup}
                   />
                 ))}
               </div>
@@ -247,7 +327,7 @@ function ByTeamTab({ picks, playerLookup }) {
   );
 }
 
-function ByRoundTab({ picks, playerLookup }) {
+function ByRoundTab({ picks }) {
   const roundBuckets = useMemo(() => buildRoundBuckets(picks), [picks]);
 
   return (
@@ -262,7 +342,6 @@ function ByRoundTab({ picks, playerLookup }) {
                 <PickRow
                   key={`round-${bucket.round}-${getOverall(pick)}-${index}`}
                   pick={pick}
-                  playerLookup={playerLookup}
                 />
               ))}
             </div>
@@ -317,14 +396,42 @@ export default function DraftSummary({
   }, [players]);
 
   const picks = useMemo(() => {
-    const source = Array.isArray(mock?.completedPicks)
-      ? mock.completedPicks
-      : Array.isArray(mock?.picks)
-      ? mock.picks
-      : [];
+    const completedPicks = Array.isArray(mock?.completedPicks) ? mock.completedPicks : [];
+    const rawPicks = Array.isArray(mock?.picks) ? mock.picks : [];
 
-    return [...source].sort((a, b) => getOverall(a) - getOverall(b));
-  }, [mock]);
+    if (!completedPicks.length && !rawPicks.length) {
+      return [];
+    }
+
+    const fallbackByOverall = new Map();
+    const fallbackByPlayerId = new Map();
+
+    for (const pick of rawPicks) {
+      const overall = getOverall(pick);
+      const playerId = getPlayerId(pick);
+
+      if (overall !== 9999 && !fallbackByOverall.has(overall)) {
+        fallbackByOverall.set(overall, pick);
+      }
+
+      if (playerId && !fallbackByPlayerId.has(playerId)) {
+        fallbackByPlayerId.set(playerId, pick);
+      }
+    }
+
+    const merged = completedPicks.length
+      ? completedPicks.map((pick) => {
+          const fallbackPick =
+            fallbackByOverall.get(getOverall(pick)) ||
+            fallbackByPlayerId.get(getPlayerId(pick)) ||
+            null;
+
+          return mergePickData(pick, fallbackPick, playerLookup);
+        })
+      : rawPicks.map((pick) => mergePickData(pick, null, playerLookup));
+
+    return [...merged].sort((a, b) => getOverall(a) - getOverall(b));
+  }, [mock, playerLookup]);
 
   return (
     <div className="draft-summary-page-shell">
@@ -367,9 +474,9 @@ export default function DraftSummary({
         </button>
       </div>
 
-      {activeTab === 'overview' && <OverviewTab picks={picks} playerLookup={playerLookup} />}
-      {activeTab === 'team' && <ByTeamTab picks={picks} playerLookup={playerLookup} />}
-      {activeTab === 'round' && <ByRoundTab picks={picks} playerLookup={playerLookup} />}
+      {activeTab === 'overview' && <OverviewTab picks={picks} />}
+      {activeTab === 'team' && <ByTeamTab picks={picks} />}
+      {activeTab === 'round' && <ByRoundTab picks={picks} />}
     </div>
   );
 }
