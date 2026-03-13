@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import TopNav from '../components/TopNav';
 import DraftBoard from '../components/DraftBoard';
@@ -48,8 +48,17 @@ function getDraftTitle(draft) {
   return 'Shared Draft';
 }
 
+function getDraftStatusLabel(draft) {
+  if (!draft) return 'Saved';
+  if (draft.status === 'completed') return 'Completed';
+  if (draft.status === 'in_progress') return 'In Progress';
+  if (draft.status === 'active') return 'Active';
+  return draft.status || 'Saved';
+}
+
 export default function SharedGroupDraftPage() {
   const { groupId, mockId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const [sharedDraft, setSharedDraft] = useState(null);
@@ -91,10 +100,17 @@ export default function SharedGroupDraftPage() {
           throw new Error('Shared draft not found.');
         }
 
-        setSharedDraft({
+        const nextSharedDraft = {
           id: sharedDraftSnap.id,
           ...sharedDraftSnap.data(),
-        });
+        };
+
+        if (nextSharedDraft.status === 'completed') {
+          navigate(`/groups/${groupId}/drafts/${mockId}/summary`, { replace: true });
+          return;
+        }
+
+        setSharedDraft(nextSharedDraft);
       } catch (error) {
         console.error('[shared-group-draft] load failed', error);
         setPageError(error?.message || 'Failed to load shared draft.');
@@ -105,7 +121,7 @@ export default function SharedGroupDraftPage() {
     }
 
     loadSharedDraft();
-  }, [groupId, mockId, user]);
+  }, [groupId, mockId, navigate, user]);
 
   const board = useMemo(() => {
     if (!sharedDraft) return [];
@@ -114,6 +130,7 @@ export default function SharedGroupDraftPage() {
 
   const currentSlot = useMemo(() => {
     if (!sharedDraft || !board.length) return null;
+
     const currentPickIndex =
       typeof sharedDraft.currentPickIndex === 'number'
         ? sharedDraft.currentPickIndex
@@ -227,9 +244,11 @@ export default function SharedGroupDraftPage() {
               Team setup:{' '}
               {sharedDraft?.selectedTeam === 'ALL'
                 ? 'All 32 Teams'
+                : Array.isArray(sharedDraft?.selectedTeams) && sharedDraft.selectedTeams.length > 1
+                ? `${sharedDraft.selectedTeams.length} Teams`
                 : sharedDraft?.selectedTeam || '—'}
             </span>
-            <span className="badge">Status: {sharedDraft?.status || 'Saved'}</span>
+            <span className="badge">Status: {getDraftStatusLabel(sharedDraft)}</span>
             <span className="badge">Shared: {formatDateTime(sharedDraft?.sharedAt)}</span>
             {nextUpcomingPick ? (
               <span className="badge">
@@ -265,13 +284,16 @@ export default function SharedGroupDraftPage() {
                 <div className="player-list">
                   {picks
                     .slice()
-                    .sort((a, b) => (b.overallPick ?? 0) - (a.overallPick ?? 0))
+                    .sort((a, b) => (b.overallPick ?? a.overall ?? 0) - (a.overallPick ?? b.overall ?? 0))
                     .map((pick) => (
-                      <div key={`${pick.overallPick}-${pick.playerId}`} className="player-card">
+                      <div
+                        key={`${pick.overallPick ?? pick.overall}-${pick.playerId}`}
+                        className="player-card"
+                      >
                         <div className="pick-header">
                           <div style={{ display: 'grid', gap: '6px' }}>
                             <h4>
-                              #{pick.overallPick} - {pick.playerName}
+                              #{pick.overallPick ?? pick.overall} - {pick.playerName}
                             </h4>
                             <div className="subtle">
                               {pick.position} • {pick.school}

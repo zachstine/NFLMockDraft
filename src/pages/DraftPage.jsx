@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import TopNav from '../components/TopNav';
 import DraftBoard from '../components/DraftBoard';
 import PlayerList from '../components/PlayerList';
@@ -11,6 +12,7 @@ import {
 } from '../services/draftService';
 import { draftCapital2026 } from '../data/draftCapital2026';
 import { NFL_TEAMS } from '../data/teams';
+import { db } from '../lib/firebase';
 
 const POSITION_ORDER = [
   'ALL',
@@ -46,10 +48,13 @@ export default function DraftPage() {
   const [search, setSearch] = useState('');
   const [savingPick, setSavingPick] = useState(false);
   const [cpuPickInFlight, setCpuPickInFlight] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const [error, setError] = useState('');
   const [selectedRound, setSelectedRound] = useState('ALL');
 
   const autoPickInFlightRef = useRef(false);
+  const finishInFlightRef = useRef(false);
+  const redirectedToSummaryRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = listenToMockDraft(mockId, (nextMock) => {
@@ -96,6 +101,14 @@ export default function DraftPage() {
     return buildDraftBoard(mockDraft.rounds);
   }, [mockDraft]);
 
+  const playersById = useMemo(() => {
+    const map = new Map();
+    for (const player of players) {
+      map.set(player.id, player);
+    }
+    return map;
+  }, [players]);
+
   const draftedPlayerIds = useMemo(() => {
     return new Set((mockDraft?.picks ?? []).map((pick) => pick.playerId));
   }, [mockDraft]);
@@ -122,7 +135,14 @@ export default function DraftPage() {
       });
   }, [allAvailablePlayers, positionFilter, search]);
 
-  const currentSlot = board[mockDraft?.currentPickIndex ?? 0] ?? null;
+  const completedPicksCount = mockDraft?.picks?.length ?? 0;
+  const totalPicks = board.length;
+  const remainingPicks = Math.max(totalPicks - completedPicksCount, 0);
+  const isDraftCompleted = mockDraft?.status === 'completed';
+
+  const currentSlot = isDraftCompleted
+    ? null
+    : board[mockDraft?.currentPickIndex ?? 0] ?? null;
 
   const userControlledTeams = useMemo(() => {
     if (!mockDraft) return [];
@@ -149,18 +169,109 @@ export default function DraftPage() {
 
   const canUserPick = useMemo(() => {
     if (!mockDraft || !currentSlot) return false;
+    if (isDraftCompleted) return false;
+    if (isFinishing) return false;
     return isUserControlledPick;
-  }, [mockDraft, currentSlot, isUserControlledPick]);
+  }, [mockDraft, currentSlot, isUserControlledPick, isDraftCompleted, isFinishing]);
 
   const cpuOnClock = useMemo(() => {
     if (!mockDraft || !currentSlot) return false;
     if (loadingPlayers) return false;
+    if (isDraftCompleted || isFinishing) return false;
     if (userControlledTeams.length === NFL_TEAMS.length) return false;
     return !isUserControlledPick;
-  }, [mockDraft, currentSlot, loadingPlayers, userControlledTeams, isUserControlledPick]);
+  }, [
+    mockDraft,
+    currentSlot,
+    loadingPlayers,
+    userControlledTeams,
+    isUserControlledPick,
+    isDraftCompleted,
+    isFinishing,
+  ]);
+
+  const completedPicksForSummary = useMemo(() => {
+    const picks = mockDraft?.picks ?? [];
+
+    return [...picks]
+      .map((pick) => {
+        const playerFromPool = playersById.get(pick.playerId);
+
+        return {
+          overall: pick.overall ?? null,
+          round: pick.round ?? null,
+          pickInRound: pick.pickInRound ?? null,
+          team: pick.team ?? '',
+          player: {
+            id: pick.playerId ?? playerFromPool?.id ?? null,
+            name:
+              pick.playerName ||
+              playerFromPool?.fullName ||
+              playerFromPool?.name ||
+              'Unknown Player',
+            position:
+              pick.playerPosition ||
+              playerFromPool?.position ||
+              '',
+            school:
+              pick.playerSchool ||
+              playerFromPool?.school ||
+              playerFromPool?.college ||
+              '',
+          },
+          draftedAt: pick.draftedAt ?? null,
+          isAuto: Boolean(pick.isAuto),
+        };
+      })
+      .sort((a, b) => (a.overall ?? 9999) - (b.overall ?? 9999));
+  }, [mockDraft, playersById]);
+
+  async function finishDraft({ auto = false } = {}) {
+    if (!mockDraft || !mockId) return;
+    if (finishInFlightRef.current) return;
+    if (isDraftCompleted) {
+      if (!redirectedToSummaryRef.current) {
+        redirectedToSummaryRef.current = true;
+        navigate(`/draft/${mockId}/summary`, { replace: true });
+      }
+      return;
+    }
+
+    const picksToSave = completedPicksForSummary;
+    if (!picksToSave.length) {
+      if (!auto) {
+        setError('Make at least one pick before finishing the draft.');
+      }
+      return;
+    }
+
+    finishInFlightRef.current = true;
+    autoPickInFlightRef.current = true;
+    setCpuPickInFlight(false);
+    setIsFinishing(true);
+    setError('');
+
+    try {
+      await updateDoc(doc(db, 'mocks', mockId), {
+        status: 'completed',
+        completedAt: serverTimestamp(),
+        completedPicks: picksToSave,
+        updatedAt: serverTimestamp(),
+      });
+
+      redirectedToSummaryRef.current = true;
+      navigate(`/draft/${mockId}/summary`, { replace: true });
+    } catch (finishError) {
+      finishInFlightRef.current = false;
+      autoPickInFlightRef.current = false;
+      setIsFinishing(false);
+      setError(finishError.message || 'Could not finish draft.');
+    }
+  }
 
   async function handlePick(player, { isAuto = false } = {}) {
     if (!mockDraft || !currentSlot || !player) return;
+    if (isDraftCompleted || isFinishing) return;
 
     setSavingPick(true);
     setError('');
@@ -176,12 +287,41 @@ export default function DraftPage() {
   }
 
   useEffect(() => {
+    if (!mockDraft) return;
+
+    if (mockDraft.status === 'completed' && !redirectedToSummaryRef.current) {
+      redirectedToSummaryRef.current = true;
+      navigate(`/draft/${mockId}/summary`, { replace: true });
+    }
+  }, [mockDraft, mockId, navigate]);
+
+  useEffect(() => {
+    if (!mockDraft) return;
+    if (isDraftCompleted) return;
+    if (isFinishing) return;
+    if (!totalPicks) return;
+
+    if (completedPicksCount >= totalPicks) {
+      finishDraft({ auto: true });
+    }
+  }, [
+    mockDraft,
+    completedPicksCount,
+    totalPicks,
+    isDraftCompleted,
+    isFinishing,
+    completedPicksForSummary,
+  ]);
+
+  useEffect(() => {
     if (!mockDraft || !currentSlot) return;
     if (loadingPlayers) return;
+    if (isDraftCompleted || isFinishing) return;
 
     const interval = setInterval(async () => {
       if (autoPickInFlightRef.current) return;
       if (savingPick) return;
+      if (finishInFlightRef.current) return;
 
       const latestCurrentIndex = mockDraft.currentPickIndex ?? 0;
       const latestSlot = board[latestCurrentIndex] ?? null;
@@ -217,15 +357,21 @@ export default function DraftPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [mockDraft, currentSlot, board, allAvailablePlayers, loadingPlayers, savingPick]);
+  }, [
+    mockDraft,
+    currentSlot,
+    board,
+    allAvailablePlayers,
+    loadingPlayers,
+    savingPick,
+    isDraftCompleted,
+    isFinishing,
+    mockId,
+  ]);
 
   if (!mockDraft) {
     return <div className="loading-screen">Loading draft...</div>;
   }
-
-  const completedPicks = mockDraft.picks?.length ?? 0;
-  const totalPicks = board.length;
-  const remainingPicks = Math.max(totalPicks - completedPicks, 0);
 
   const positionOptions = POSITION_ORDER.filter(
     (position) => position === 'ALL' || players.some((player) => player.position === position)
@@ -251,14 +397,24 @@ export default function DraftPage() {
             <div className="draft-top-banner-title">
               {userControlledTeams.length === NFL_TEAMS.length
                 ? 'User-controlled full draft'
-                : `${userControlledTeams.length} user-controlled team${userControlledTeams.length === 1 ? '' : 's'} | CPU BPA for others`}
+                : `${userControlledTeams.length} user-controlled team${
+                    userControlledTeams.length === 1 ? '' : 's'
+                  } | CPU BPA for others`}
             </div>
           </div>
 
           <div className="draft-top-banner-right">
-            <span className="badge">Completed: {completedPicks}</span>
+            <span className="badge">Completed: {completedPicksCount}</span>
             <span className="badge">Remaining: {remainingPicks}</span>
             <span className="badge">Rounds: {mockDraft.rounds}</span>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => finishDraft({ auto: false })}
+              disabled={isFinishing || savingPick || cpuPickInFlight || completedPicksCount === 0}
+            >
+              {isFinishing ? 'Finishing...' : 'Finish Draft'}
+            </button>
           </div>
         </div>
 
@@ -280,6 +436,7 @@ export default function DraftPage() {
                     placeholder="Search player, school, or position"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
+                    disabled={isDraftCompleted || isFinishing}
                   />
                 </div>
 
@@ -290,6 +447,7 @@ export default function DraftPage() {
                       id="position-filter"
                       value={positionFilter}
                       onChange={(event) => setPositionFilter(event.target.value)}
+                      disabled={isDraftCompleted || isFinishing}
                     >
                       {positionOptions.map((option) => (
                         <option key={option} value={option}>
@@ -301,12 +459,16 @@ export default function DraftPage() {
 
                   <div className="inline-row">
                     {savingPick && <span className="subtle">Saving pick...</span>}
-                    {isUserControlledPick && currentSlot && (
+
+                    {isFinishing && <span className="subtle">Finalizing draft...</span>}
+
+                    {!isDraftCompleted && isUserControlledPick && currentSlot && (
                       <span className="subtle">
                         Your pick: {currentSlot.team}
                       </span>
                     )}
-                    {cpuOnClock && (
+
+                    {!isDraftCompleted && cpuOnClock && (
                       <span className="subtle">
                         {cpuPickInFlight
                           ? `Auto-picking for ${currentSlot?.team}...`
@@ -323,7 +485,7 @@ export default function DraftPage() {
             <PlayerList
               players={availablePlayers}
               currentSlot={currentSlot}
-              canUserPick={canUserPick && !savingPick && !cpuPickInFlight}
+              canUserPick={canUserPick && !savingPick && !cpuPickInFlight && !isFinishing}
               onPick={handlePick}
               loading={loadingPlayers}
               activeTeam={activeTeam}

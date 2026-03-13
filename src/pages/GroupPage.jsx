@@ -96,6 +96,14 @@ function getSharedDraftTeamLabel(draft) {
   return '—';
 }
 
+function getSharedDraftStatusLabel(draft) {
+  if (!draft) return 'Saved';
+  if (draft.status === 'completed') return 'Completed';
+  if (draft.status === 'in_progress') return 'In Progress';
+  if (draft.status === 'active') return 'Active';
+  return draft.status || 'Saved';
+}
+
 export default function GroupPage() {
   const { groupId } = useParams();
   const { user, profile } = useAuth();
@@ -402,58 +410,65 @@ export default function GroupPage() {
                 </div>
               ) : (
                 <div className="player-list">
-                  {groupDrafts.map((draft) => (
-                    <div key={draft.id} className="player-card">
-                      <div className="pick-header">
-                        <div style={{ display: 'grid', gap: '6px' }}>
-                          <h4>{getSharedDraftTitle(draft)}</h4>
-                          <div className="subtle">
-                            By {draft.ownerUsername || 'Unknown GM'}
+                  {groupDrafts.map((draft) => {
+                    const isCompleted = draft.status === 'completed';
+                    const sharedDraftLink = isCompleted
+                      ? `/groups/${groupId}/drafts/${draft.id}/summary`
+                      : `/groups/${groupId}/drafts/${draft.id}`;
+
+                    return (
+                      <div key={draft.id} className="player-card">
+                        <div className="pick-header">
+                          <div style={{ display: 'grid', gap: '6px' }}>
+                            <h4>{getSharedDraftTitle(draft)}</h4>
+                            <div className="subtle">
+                              By {draft.ownerUsername || 'Unknown GM'}
+                            </div>
+                          </div>
+
+                          <div className="inline-row">
+                            <span className="badge">{getSharedDraftStatusLabel(draft)}</span>
+                            <span className="team-pill">
+                              {getSharedDraftTeamLabel(draft)}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="inline-row">
-                          <span className="badge">{draft.status || 'Saved'}</span>
-                          <span className="team-pill">
-                            {getSharedDraftTeamLabel(draft)}
+                        <div className="inline-row" style={{ marginTop: '12px' }}>
+                          <span className="badge">
+                            Updated: {formatDateTime(draft.updatedAt || draft.createdAt)}
                           </span>
+                          <span className="badge">Rounds: {draft.rounds || 7}</span>
                         </div>
-                      </div>
 
-                      <div className="inline-row" style={{ marginTop: '12px' }}>
-                        <span className="badge">
-                          Updated: {formatDateTime(draft.updatedAt || draft.createdAt)}
-                        </span>
-                        <span className="badge">Rounds: {draft.rounds || 7}</span>
-                      </div>
+                        <div className="subtle" style={{ marginTop: '12px' }}>
+                          Picks made: {Array.isArray(draft.picks) ? draft.picks.length : draft.pickCount ?? 0}
+                        </div>
 
-                      <div className="subtle" style={{ marginTop: '12px' }}>
-                        Picks made: {Array.isArray(draft.picks) ? draft.picks.length : draft.pickCount ?? 0}
-                      </div>
-
-                      <div className="player-actions">
-                        <div className="inline-row">
-                          <Link
-                            to={`/groups/${groupId}/drafts/${draft.id}`}
-                            className="selector-action"
-                          >
-                            View Draft
-                          </Link>
-
-                          {canRemoveSharedDraft(draft) ? (
-                            <button
-                              type="button"
+                        <div className="player-actions">
+                          <div className="inline-row">
+                            <Link
+                              to={sharedDraftLink}
                               className="selector-action"
-                              onClick={() => handleRemoveSharedDraft(draft)}
-                              disabled={removingDraftId === draft.id}
                             >
-                              {removingDraftId === draft.id ? 'Removing...' : 'Remove from Group'}
-                            </button>
-                          ) : null}
+                              {isCompleted ? 'View Summary' : 'View Draft'}
+                            </Link>
+
+                            {canRemoveSharedDraft(draft) ? (
+                              <button
+                                type="button"
+                                className="selector-action"
+                                onClick={() => handleRemoveSharedDraft(draft)}
+                                disabled={removingDraftId === draft.id}
+                              >
+                                {removingDraftId === draft.id ? 'Removing...' : 'Remove from Group'}
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

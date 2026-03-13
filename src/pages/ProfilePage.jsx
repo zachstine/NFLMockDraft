@@ -185,52 +185,61 @@ function DraftListCard({ drafts, onShareDraft, onDeleteDraft, deletingDraftId })
         <div className="empty-state">You have no saved drafts yet.</div>
       ) : (
         <div className="player-list">
-          {drafts.map((draft) => (
-            <div key={draft.id} className="player-card">
-              <div className="pick-header">
-                <div style={{ display: 'grid', gap: '6px' }}>
-                  <h4>{getDraftTitle(draft)}</h4>
-                  <div className="subtle">Created {formatDate(draft.createdAt)}</div>
+          {drafts.map((draft) => {
+            const isCompleted = draft.status === 'completed';
+            const primaryDraftLink = isCompleted
+              ? `/draft/${draft.id}/summary`
+              : `/draft/${draft.id}`;
+
+            return (
+              <div key={draft.id} className="player-card">
+                <div className="pick-header">
+                  <div style={{ display: 'grid', gap: '6px' }}>
+                    <h4>{getDraftTitle(draft)}</h4>
+                    <div className="subtle">Created {formatDate(draft.createdAt)}</div>
+                  </div>
+
+                  <div className="inline-row">
+                    <span className="badge">{getDraftStatusLabel(draft)}</span>
+                    <span className="position-pill">{getDraftProgressLabel(draft)}</span>
+                  </div>
                 </div>
 
-                <div className="inline-row">
-                  <span className="badge">{getDraftStatusLabel(draft)}</span>
-                  <span className="position-pill">{getDraftProgressLabel(draft)}</span>
+                <div className="inline-row" style={{ marginTop: '12px' }}>
+                  <span className="team-pill">Team: {getDraftTeamLabel(draft)}</span>
+                  <span className="badge">
+                    Updated: {formatDateTime(draft.updatedAt || draft.createdAt)}
+                  </span>
+                  <span className="badge">Rounds: {draft.rounds || 7}</span>
+                </div>
+
+                <div className="player-actions">
+                  <div className="inline-row">
+                    <Link to={primaryDraftLink} className="selector-action">
+                      {isCompleted ? 'View Summary' : 'Open Draft'}
+                    </Link>
+
+                    <button
+                      type="button"
+                      className="selector-action"
+                      onClick={() => onShareDraft(draft)}
+                    >
+                      Share to Group
+                    </button>
+
+                    <button
+                      type="button"
+                      className="selector-action"
+                      onClick={() => onDeleteDraft(draft)}
+                      disabled={deletingDraftId === draft.id}
+                    >
+                      {deletingDraftId === draft.id ? 'Deleting...' : 'Delete Draft'}
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div className="inline-row" style={{ marginTop: '12px' }}>
-                <span className="team-pill">Team: {getDraftTeamLabel(draft)}</span>
-                <span className="badge">
-                  Updated: {formatDateTime(draft.updatedAt || draft.createdAt)}
-                </span>
-                <span className="badge">Rounds: {draft.rounds || 7}</span>
-              </div>
-
-              <div className="player-actions">
-                <div className="inline-row">
-                  <Link to={`/draft/${draft.id}`} className="selector-action">
-                    Open Draft
-                  </Link>
-                  <button
-                    type="button"
-                    className="selector-action"
-                    onClick={() => onShareDraft(draft)}
-                  >
-                    Share to Group
-                  </button>
-                  <button
-                    type="button"
-                    className="selector-action"
-                    onClick={() => onDeleteDraft(draft)}
-                    disabled={deletingDraftId === draft.id}
-                  >
-                    {deletingDraftId === draft.id ? 'Deleting...' : 'Delete Draft'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -658,6 +667,9 @@ export default function ProfilePage() {
         year: draftToShare.year || '2026',
         status: draftToShare.status || 'active',
         picks: Array.isArray(draftToShare.picks) ? draftToShare.picks : [],
+        completedPicks: Array.isArray(draftToShare.completedPicks)
+          ? draftToShare.completedPicks
+          : [],
         pickCount: Array.isArray(draftToShare.picks) ? draftToShare.picks.length : 0,
         currentPickIndex:
           typeof draftToShare.currentPickIndex === 'number'
@@ -665,6 +677,7 @@ export default function ProfilePage() {
             : 0,
         createdAt: draftToShare.createdAt || serverTimestamp(),
         updatedAt: draftToShare.updatedAt || serverTimestamp(),
+        completedAt: draftToShare.completedAt || null,
         sharedAt: serverTimestamp(),
         sharedByUid: user.uid,
         sharedByUsername: displayUsername,

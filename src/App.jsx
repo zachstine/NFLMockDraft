@@ -7,6 +7,8 @@ import DraftPage from './pages/DraftPage';
 import ProfilePage from './pages/ProfilePage';
 import GroupPage from './pages/GroupPage';
 import SharedGroupDraftPage from './pages/SharedGroupDraftPage';
+import DraftSummaryPage from './pages/DraftSummaryPage';
+import SharedGroupDraftSummaryPage from './pages/SharedGroupDraftSummaryPage';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -29,8 +31,6 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
-        <Route path="/groups/:groupId/drafts/:mockId" element={<SharedGroupDraftPage />} />
-        
         <Route
           path="/"
           element={
@@ -50,6 +50,15 @@ export default function App() {
         />
 
         <Route
+          path="/draft/:mockId/summary"
+          element={
+            <ProtectedRoute>
+              <DraftSummaryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>
@@ -63,6 +72,24 @@ export default function App() {
           element={
             <ProtectedRoute>
               <GroupPage theme={theme} setTheme={setTheme} />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/groups/:groupId/drafts/:mockId"
+          element={
+            <ProtectedRoute>
+              <SharedGroupDraftPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/groups/:groupId/drafts/:mockId/summary"
+          element={
+            <ProtectedRoute>
+              <SharedGroupDraftSummaryPage />
             </ProtectedRoute>
           }
         />
