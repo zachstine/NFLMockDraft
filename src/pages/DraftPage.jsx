@@ -49,7 +49,7 @@ export default function DraftPage() {
   const [error, setError] = useState('');
   const [selectedRound, setSelectedRound] = useState('ALL');
 
-  const autoPickLockRef = useRef(null);
+  const autoPickInFlightRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = listenToMockDraft(mockId, (nextMock) => {
@@ -129,15 +129,6 @@ export default function DraftPage() {
     return mockDraft.selectedTeam === 'ALL' || mockDraft.selectedTeam === currentSlot.team;
   }, [mockDraft, currentSlot]);
 
-  useEffect(() => {
-    if (!currentSlot) {
-      autoPickLockRef.current = null;
-      return;
-    }
-
-    autoPickLockRef.current = null;
-  }, [currentSlot?.overall]);
-
   async function handlePick(player, { isAuto = false } = {}) {
     if (!mockDraft || !currentSlot || !player) return;
 
@@ -158,53 +149,37 @@ export default function DraftPage() {
     if (!mockDraft || !currentSlot) return;
     if (loadingPlayers) return;
     if (mockDraft.selectedTeam === 'ALL') return;
-    if (currentSlot.team === mockDraft.selectedTeam) return;
-    if (savingPick || autoPicking) return;
 
-    const slotKey = `${mockId}-${currentSlot.overall}`;
-    if (autoPickLockRef.current === slotKey) return;
+    const interval = setInterval(async () => {
+      if (autoPickInFlightRef.current) return;
+      if (savingPick) return;
 
-    const bestAvailable = allAvailablePlayers[0];
-    if (!bestAvailable) return;
+      const latestCurrentIndex = mockDraft.currentPickIndex ?? 0;
+      const latestSlot = board[latestCurrentIndex] ?? null;
+      if (!latestSlot) return;
 
-    autoPickLockRef.current = slotKey;
+      const isUserControlledPick = latestSlot.team === mockDraft.selectedTeam;
+      if (isUserControlledPick) return;
 
-    let cancelled = false;
+      const bestAvailable = allAvailablePlayers[0];
+      if (!bestAvailable) return;
 
-    async function runAutoPick() {
+      autoPickInFlightRef.current = true;
       setAutoPicking(true);
       setError('');
 
       try {
-        if (!cancelled) {
-          await makeDraftPick(mockId, currentSlot, bestAvailable, true);
-        }
+        await makeDraftPick(mockId, latestSlot, bestAvailable, true);
       } catch (pickError) {
-        if (!cancelled) {
-          setError(pickError.message || 'Could not auto-pick.');
-          autoPickLockRef.current = null;
-        }
+        setError(pickError.message || 'Could not auto-pick.');
       } finally {
-        if (!cancelled) {
-          setAutoPicking(false);
-        }
+        autoPickInFlightRef.current = false;
+        setAutoPicking(false);
       }
-    }
+    }, 3000);
 
-    runAutoPick();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    mockId,
-    mockDraft,
-    currentSlot,
-    allAvailablePlayers,
-    loadingPlayers,
-    savingPick,
-    autoPicking,
-  ]);
+    return () => clearInterval(interval);
+  }, [mockDraft, currentSlot, board, allAvailablePlayers, loadingPlayers, savingPick]);
 
   if (!mockDraft) {
     return <div className="loading-screen">Loading draft...</div>;
