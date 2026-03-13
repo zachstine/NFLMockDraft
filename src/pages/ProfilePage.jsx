@@ -737,9 +737,9 @@ export default function ProfilePage() {
         </div>
 
         <div
+          id="groups-section"
           className="draft-layout"
-          style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginTop: '18px' }}
-        >
+          style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginTop: '18px' }}>
           <DraftListCard drafts={drafts} onShareDraft={openShareDraftModal} />
           <GroupsListCard groups={groups} />
         </div>
