@@ -10,8 +10,6 @@ import {
   query,
   runTransaction,
   serverTimestamp,
-  setDoc,
-  where,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getAllPlayers } from '../services/playerService';
@@ -89,18 +87,28 @@ export function listenToMockDraft(mockId, callback) {
 }
 
 export async function getPlayersForYear(year) {
-  const playersRef = collection(db, 'draftClasses', year, 'players');
-  const playersQuery = query(playersRef, orderBy('overallRank', 'asc'));
-  const snapshot = await getDocs(playersQuery);
+  try {
+    const playersRef = collection(db, 'draftClasses', String(year), 'players');
+    const playersQuery = query(playersRef, orderBy('overallRank', 'asc'));
+    const snapshot = await getDocs(playersQuery);
 
-  if (snapshot.empty) {
-    return getAllPlayers;
+    if (!snapshot.empty) {
+      return snapshot.docs.map((docSnapshot) => ({
+        id: docSnapshot.id,
+        ...docSnapshot.data(),
+      }));
+    }
+  } catch (error) {
+    console.warn('[draftService] Firestore draftClasses read failed, falling back to local players.', error);
   }
 
-  return snapshot.docs.map((docSnapshot) => ({
-    id: docSnapshot.id,
-    ...docSnapshot.data(),
-  }));
+  const localPlayers = await getAllPlayers(String(year));
+
+  if (!Array.isArray(localPlayers)) {
+    throw new Error('Local player dataset could not be loaded.');
+  }
+
+  return localPlayers;
 }
 
 export async function makeDraftPick(mockId, currentSlot, player, isAuto = false) {
@@ -126,16 +134,25 @@ export async function makeDraftPick(mockId, currentSlot, player, isAuto = false)
       throw new Error('Draft state is out of sync. Refresh and try again.');
     }
 
+    const playerName = player.fullName || player.name || 'Unknown Player';
+    const playerPosition =
+      player.position || player.pos || player.primaryPosition || '';
+    const playerSchool = player.school || player.college || '';
+
     const nextPick = {
+      overall: currentSlot.overall,
       overallPick: currentSlot.overall,
       round: currentSlot.round,
       pickInRound: currentSlot.pickInRound,
+      roundPick: currentSlot.pickInRound,
       team: currentSlot.team,
       playerId: player.id,
-      playerName: player.fullName,
-      position: player.position,
-      school: player.school,
-      overallRank: player.overallRank,
+      playerName,
+      playerPosition,
+      position: playerPosition,
+      playerSchool,
+      school: playerSchool,
+      overallRank: player.overallRank ?? null,
       isAuto,
       draftedAt: new Date().toISOString(),
     };
