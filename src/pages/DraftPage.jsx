@@ -119,18 +119,10 @@ function getNeedChipStyle(tier, isFilled) {
     };
   }
 
-  if (tier === 'medium') {
-    return {
-      border: '1px solid rgba(245, 158, 11, 0.45)',
-      background: 'rgba(245, 158, 11, 0.12)',
-      color: '#fef3c7',
-    };
-  }
-
   return {
-    border: '1px solid rgba(148, 163, 184, 0.35)',
-    background: 'rgba(148, 163, 184, 0.10)',
-    color: '#e5e7eb',
+    border: '1px solid rgba(245, 158, 11, 0.45)',
+    background: 'rgba(245, 158, 11, 0.12)',
+    color: '#fef3c7',
   };
 }
 
@@ -684,7 +676,7 @@ export default function DraftPage() {
                           gap: '8px',
                         }}
                       >
-                        {['high', 'medium', 'low'].flatMap((tier) =>
+                        {['high', 'medium'].flatMap((tier) =>
                           Array.isArray(activeTeamNeeds?.[tier])
                             ? activeTeamNeeds[tier].map((need) => {
                                 const normalizedNeed = normalizePosition(need);
@@ -719,7 +711,7 @@ export default function DraftPage() {
                                         textTransform: 'uppercase',
                                       }}
                                     >
-                                      {tier === 'high' ? 'H' : tier === 'medium' ? 'M' : 'L'}
+                                      {tier === 'high' ? 'H' : 'M'}
                                     </span>
                                     <span>{need}</span>
                                     {isFilled ? <span style={{ fontSize: '0.78rem' }}>✓</span> : null}
