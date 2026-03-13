@@ -69,16 +69,6 @@ export default function TopNav() {
           Groups
         </button>
 
-        {isGroupPage ? (
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => navigate(location.pathname)}
-          >
-            Group
-          </button>
-        ) : null}
-
         <button
           type="button"
           className="secondary-btn"
