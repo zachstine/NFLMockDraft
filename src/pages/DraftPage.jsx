@@ -13,8 +13,8 @@ import {
 import { draftCapital2026 } from '../data/draftCapital2026';
 import { NFL_TEAMS } from '../data/teams';
 import { TEAM_NEEDS_2026 } from '../data/teamNeeds2026';
-import { getBestCpuPick } from '../utils/draftLogic';
 import { db } from '../lib/firebase';
+import { getBestCpuPick } from '../utils/draftLogic';
 
 const POSITION_ORDER = [
   'ALL',
@@ -63,30 +63,6 @@ function getUpcomingPicks(teamAbbr, currentOverallPick) {
   return allPicks.filter((pickNumber) => pickNumber >= currentOverallPick);
 }
 
-function normalizePosition(position) {
-  return String(position || '').trim().toUpperCase();
-}
-
-function getPositionGroup(position) {
-  return POSITION_GROUP_MAP[normalizePosition(position)] || normalizePosition(position);
-}
-
-function buildDraftedNeedSet(picks, teamAbbr) {
-  const draftedNeedSet = new Set();
-
-  for (const pick of picks ?? []) {
-    if (pick?.team !== teamAbbr) continue;
-
-    const position = normalizePosition(pick?.playerPosition || pick?.position);
-    if (!position) continue;
-
-    draftedNeedSet.add(position);
-    draftedNeedSet.add(getPositionGroup(position));
-  }
-
-  return draftedNeedSet;
-}
-
 function getSafePlayerName(player, fallbackPick) {
   return (
     player?.fullName ||
@@ -117,33 +93,43 @@ function getSafePlayerSchool(player, fallbackPick) {
   );
 }
 
-function getNeedChipStyle(tier, isFilled) {
-  const tierStyles = {
-    high: {
-      border: '1px solid rgba(239, 68, 68, 0.45)',
-      background: 'rgba(239, 68, 68, 0.12)',
-    },
-    medium: {
-      border: '1px solid rgba(245, 158, 11, 0.45)',
-      background: 'rgba(245, 158, 11, 0.12)',
-    },
-    low: {
-      border: '1px solid rgba(148, 163, 184, 0.35)',
-      background: 'rgba(148, 163, 184, 0.10)',
-    },
-  };
+function normalizePosition(position) {
+  return String(position || '').trim().toUpperCase();
+}
 
+function getPositionGroup(position) {
+  return POSITION_GROUP_MAP[normalizePosition(position)] || normalizePosition(position);
+}
+
+function getNeedChipStyle(tier, isFilled) {
   if (isFilled) {
     return {
-      border: '1px solid rgba(34, 197, 94, 0.8)',
+      border: '1px solid rgba(34, 197, 94, 0.9)',
       background: 'rgba(34, 197, 94, 0.18)',
       boxShadow: '0 0 12px rgba(34, 197, 94, 0.45)',
       color: '#dcfce7',
     };
   }
 
+  if (tier === 'high') {
+    return {
+      border: '1px solid rgba(239, 68, 68, 0.45)',
+      background: 'rgba(239, 68, 68, 0.12)',
+      color: '#fee2e2',
+    };
+  }
+
+  if (tier === 'medium') {
+    return {
+      border: '1px solid rgba(245, 158, 11, 0.45)',
+      background: 'rgba(245, 158, 11, 0.12)',
+      color: '#fef3c7',
+    };
+  }
+
   return {
-    ...tierStyles[tier],
+    border: '1px solid rgba(148, 163, 184, 0.35)',
+    background: 'rgba(148, 163, 184, 0.10)',
     color: '#e5e7eb',
   };
 }
@@ -253,12 +239,9 @@ export default function DraftPage() {
   const remainingPicks = Math.max(totalPicks - completedPicksCount, 0);
   const isDraftCompleted = mockDraft?.status === 'completed';
 
-  const cpuPickSpeedSeconds =
-    mockDraft?.cpuPickSpeedSeconds === 1
-      ? 1
-      : 3;
-
+  const cpuPickSpeedSeconds = mockDraft?.cpuPickSpeedSeconds === 1 ? 1 : 3;
   const cpuPickDelayMs = cpuPickSpeedSeconds * 1000;
+  const cpuDraftMode = mockDraft?.cpuDraftMode === 'bpa' ? 'bpa' : 'logic';
 
   const currentSlot = isDraftCompleted
     ? null
@@ -480,13 +463,16 @@ export default function DraftPage() {
     const latestIsUserControlledPick = latestUserControlledTeams.includes(currentSlot.team);
     if (latestIsUserControlledPick) return;
 
-    const cpuPlayer = getBestCpuPick({
-      availablePlayers: allAvailablePlayers,
-      teamAbbr: currentSlot.team,
-      currentRound: currentSlot.round,
-      allPicks: mockDraft?.picks ?? [],
-      topN: 15,
-    });
+    const cpuPlayer =
+      cpuDraftMode === 'bpa'
+        ? allAvailablePlayers[0] ?? null
+        : getBestCpuPick({
+            availablePlayers: allAvailablePlayers,
+            teamAbbr: currentSlot.team,
+            currentRound: currentSlot.round,
+            allPicks: mockDraft?.picks ?? [],
+            topN: 15,
+          });
 
     if (!cpuPlayer) return;
 
@@ -519,11 +505,8 @@ export default function DraftPage() {
     isFinishing,
     mockId,
     cpuPickDelayMs,
+    cpuDraftMode,
   ]);
-
-  if (!mockDraft) {
-    return <div className="loading-screen">Loading draft...</div>;
-  }
 
   const positionOptions = POSITION_ORDER.filter(
     (position) => position === 'ALL' || players.some((player) => player.position === position)
@@ -531,11 +514,24 @@ export default function DraftPage() {
 
   const activeTeamAbbr = currentSlot?.team ?? null;
   const activeTeam = NFL_TEAMS.find((team) => team.abbr === activeTeamAbbr) ?? null;
-  const activeTeamNeeds = activeTeamAbbr ? TEAM_NEEDS_2026[activeTeamAbbr] ?? null : null;
-  const draftedNeedSet = useMemo(
-    () => buildDraftedNeedSet(mockDraft?.picks ?? [], activeTeamAbbr),
-    [mockDraft?.picks, activeTeamAbbr]
-  );
+
+  const activeTeamNeeds = activeTeamAbbr ? TEAM_NEEDS_2026?.[activeTeamAbbr] ?? null : null;
+
+  const draftedNeedSet = useMemo(() => {
+    const set = new Set();
+
+    for (const pick of mockDraft?.picks ?? []) {
+      if (pick?.team !== activeTeamAbbr) continue;
+
+      const position = normalizePosition(pick?.playerPosition || pick?.position);
+      if (!position) continue;
+
+      set.add(position);
+      set.add(getPositionGroup(position));
+    }
+
+    return set;
+  }, [mockDraft?.picks, activeTeamAbbr]);
 
   const upcomingPicks =
     activeTeamAbbr && currentSlot
@@ -543,6 +539,10 @@ export default function DraftPage() {
       : [];
 
   const nextUpcomingPick = upcomingPicks[0] ?? null;
+
+  if (!mockDraft) {
+    return <div className="loading-screen">Loading draft...</div>;
+  }
 
   return (
     <div className="app-shell">
@@ -556,7 +556,7 @@ export default function DraftPage() {
                 ? 'User-controlled full draft'
                 : `${userControlledTeams.length} user-controlled team${
                     userControlledTeams.length === 1 ? '' : 's'
-                  } | CPU draft logic for others`}
+                  } | CPU ${cpuDraftMode === 'bpa' ? 'Pure BPA' : 'Draft Logic'} for others`}
             </div>
           </div>
 
@@ -565,6 +565,7 @@ export default function DraftPage() {
             <span className="badge">Remaining: {remainingPicks}</span>
             <span className="badge">Rounds: {mockDraft.rounds}</span>
             <span className="badge">CPU Speed: {cpuPickSpeedSeconds}s</span>
+            <span className="badge">CPU Mode: {cpuDraftMode === 'bpa' ? 'Pure BPA' : 'Draft Logic'}</span>
             <button
               type="button"
               className="primary-button"
@@ -598,7 +599,10 @@ export default function DraftPage() {
                   />
                 </div>
 
-                <div className="filter-row" style={{ alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
+                <div
+                  className="filter-row"
+                  style={{ alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}
+                >
                   <div className="field" style={{ minWidth: '200px', margin: 0 }}>
                     <label htmlFor="position-filter">Position</label>
                     <select
@@ -637,36 +641,48 @@ export default function DraftPage() {
                         }}
                       >
                         {['high', 'medium', 'low'].flatMap((tier) =>
-                          (activeTeamNeeds[tier] ?? []).map((need) => {
-                            const normalizedNeed = normalizePosition(need);
-                            const isFilled = draftedNeedSet.has(normalizedNeed);
+                          Array.isArray(activeTeamNeeds?.[tier])
+                            ? activeTeamNeeds[tier].map((need) => {
+                                const normalizedNeed = normalizePosition(need);
+                                const isFilled = draftedNeedSet.has(normalizedNeed);
 
-                            return (
-                              <span
-                                key={`${tier}-${normalizedNeed}`}
-                                style={{
-                                  ...getNeedChipStyle(tier, isFilled),
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  padding: '6px 10px',
-                                  borderRadius: '999px',
-                                  fontSize: '0.82rem',
-                                  fontWeight: 600,
-                                  whiteSpace: 'nowrap',
-                                  transition:
-                                    'background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
-                                }}
-                                title={isFilled ? `${need} already drafted for ${activeTeam?.name}` : `${tier} need`}
-                              >
-                                <span style={{ opacity: 0.8, fontSize: '0.72rem', textTransform: 'uppercase' }}>
-                                  {tier === 'high' ? 'H' : tier === 'medium' ? 'M' : 'L'}
-                                </span>
-                                <span>{need}</span>
-                                {isFilled ? <span style={{ fontSize: '0.78rem' }}>✓</span> : null}
-                              </span>
-                            );
-                          })
+                                return (
+                                  <span
+                                    key={`${tier}-${normalizedNeed}`}
+                                    style={{
+                                      ...getNeedChipStyle(tier, isFilled),
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      padding: '6px 10px',
+                                      borderRadius: '999px',
+                                      fontSize: '0.82rem',
+                                      fontWeight: 600,
+                                      whiteSpace: 'nowrap',
+                                      transition:
+                                        'background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+                                    }}
+                                    title={
+                                      isFilled
+                                        ? `${need} already drafted for ${activeTeam?.name}`
+                                        : `${tier} need`
+                                    }
+                                  >
+                                    <span
+                                      style={{
+                                        opacity: 0.8,
+                                        fontSize: '0.72rem',
+                                        textTransform: 'uppercase',
+                                      }}
+                                    >
+                                      {tier === 'high' ? 'H' : tier === 'medium' ? 'M' : 'L'}
+                                    </span>
+                                    <span>{need}</span>
+                                    {isFilled ? <span style={{ fontSize: '0.78rem' }}>✓</span> : null}
+                                  </span>
+                                );
+                              })
+                            : []
                         )}
                       </div>
                     </div>
@@ -687,7 +703,7 @@ export default function DraftPage() {
                       <span className="subtle">
                         {cpuPickInFlight
                           ? `Auto-picking for ${currentSlot?.team}...`
-                          : `${currentSlot?.team} on the clock... (${cpuPickSpeedSeconds}s)`}
+                          : `${currentSlot?.team} on the clock... (${cpuPickSpeedSeconds}s | ${cpuDraftMode === 'bpa' ? 'Pure BPA' : 'Draft Logic'})`}
                       </span>
                     )}
                   </div>
