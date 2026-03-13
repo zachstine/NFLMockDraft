@@ -64,7 +64,7 @@ export default function TopNav() {
         <button
           type="button"
           className={isGroupsTab ? 'secondary-btn' : 'ghost-btn'}
-          onClick={handleGroupsNavigate}
+          onClick={() => navigate('/groups')}
         >
           Groups
         </button>
