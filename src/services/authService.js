@@ -20,6 +20,10 @@ function usernameToSyntheticEmail(username) {
   return `${normalizeUsername(username)}@mockdraft.local`;
 }
 
+export function getNormalizedUsername(username) {
+  return normalizeUsername(username);
+}
+
 export async function signUpWithUsername(username, password) {
   const cleanedUsername = username.trim();
   const normalized = normalizeUsername(cleanedUsername);
@@ -57,7 +61,12 @@ export async function signUpWithUsername(username, password) {
     };
 
     batch.set(userRef, profileData);
-    batch.set(usernameRef, profileData);
+    batch.set(usernameRef, {
+      uid: credentials.user.uid,
+      username: cleanedUsername,
+      usernameLower: normalized,
+      createdAt: serverTimestamp(),
+    });
 
     await batch.commit();
     return credentials.user;
