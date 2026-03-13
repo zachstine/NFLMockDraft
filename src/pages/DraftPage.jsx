@@ -172,6 +172,14 @@ export default function DraftPage() {
   const remainingPicks = Math.max(totalPicks - completedPicksCount, 0);
   const isDraftCompleted = mockDraft?.status === 'completed';
 
+  const cpuPickSpeedSeconds =
+    typeof mockDraft?.cpuPickSpeedSeconds === 'number' &&
+    [1, 3].includes(mockDraft.cpuPickSpeedSeconds)
+      ? mockDraft.cpuPickSpeedSeconds
+      : 3;
+
+  const cpuPickDelayMs = cpuPickSpeedSeconds * 1000;
+
   const currentSlot = isDraftCompleted
     ? null
     : board[mockDraft?.currentPickIndex ?? 0] ?? null;
@@ -413,7 +421,7 @@ export default function DraftPage() {
         autoPickInFlightRef.current = false;
         setCpuPickInFlight(false);
       }
-    }, 3000);
+    }, cpuPickDelayMs);
 
     return () => clearInterval(interval);
   }, [
@@ -426,6 +434,7 @@ export default function DraftPage() {
     isDraftCompleted,
     isFinishing,
     mockId,
+    cpuPickDelayMs,
   ]);
 
   if (!mockDraft) {
@@ -466,6 +475,7 @@ export default function DraftPage() {
             <span className="badge">Completed: {completedPicksCount}</span>
             <span className="badge">Remaining: {remainingPicks}</span>
             <span className="badge">Rounds: {mockDraft.rounds}</span>
+            <span className="badge">CPU Speed: {cpuPickSpeedSeconds}s</span>
             <button
               type="button"
               className="primary-button"
@@ -531,7 +541,7 @@ export default function DraftPage() {
                       <span className="subtle">
                         {cpuPickInFlight
                           ? `Auto-picking for ${currentSlot?.team}...`
-                          : `${currentSlot?.team} on the clock...`}
+                          : `${currentSlot?.team} on the clock... (${cpuPickSpeedSeconds}s)`}
                       </span>
                     )}
                   </div>
