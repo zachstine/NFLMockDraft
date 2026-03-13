@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import DraftPage from './pages/DraftPage';
 import ProfilePage from './pages/ProfilePage';
 import GroupPage from './pages/GroupPage';
+import SharedGroupDraftPage from './pages/SharedGroupDraftPage';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -28,6 +29,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
+        <Route path="/groups/:groupId/drafts/:mockId" element={<SharedGroupDraftPage />} />
+        
         <Route
           path="/"
           element={

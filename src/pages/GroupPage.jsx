@@ -348,6 +348,17 @@ export default function GroupPage() {
                       <div className="subtle" style={{ marginTop: '12px' }}>
                         Picks made: {Array.isArray(draft.picks) ? draft.picks.length : draft.pickCount ?? 0}
                       </div>
+
+                      <div className="player-actions">
+                        <div className="inline-row">
+                          <Link
+                            to={`/groups/${groupId}/drafts/${draft.id}`}
+                            className="selector-action"
+                          >
+                            View Draft
+                          </Link>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
