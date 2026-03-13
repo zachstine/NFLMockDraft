@@ -69,14 +69,56 @@ function getDraftStatusLabel(draft) {
   if (!draft) return 'Unknown';
   if (draft.status === 'completed') return 'Completed';
   if (draft.status === 'in_progress') return 'In Progress';
+  if (draft.status === 'active') return 'Active';
   return draft.status ?? 'Saved';
 }
 
 function getDraftProgressLabel(draft) {
   if (!draft) return '—';
+
+  const picksMade = Array.isArray(draft.picks) ? draft.picks.length : 0;
+  const currentPickIndex =
+    typeof draft.currentPickIndex === 'number' ? draft.currentPickIndex : 0;
+
   if (draft.status === 'completed') return 'Finished';
-  if (draft.currentOverallPick) return `On pick #${draft.currentOverallPick}`;
+  if (picksMade > 0 || currentPickIndex > 0) return `On pick #${currentPickIndex + 1}`;
   return 'Not started';
+}
+
+function getDraftTitle(draft) {
+  if (!draft) return 'Untitled Draft';
+
+  if (draft.title?.trim()) return draft.title;
+
+  if (Array.isArray(draft.selectedTeams) && draft.selectedTeams.length > 1) {
+    return `${draft.selectedTeams.length}-Team Mock Draft`;
+  }
+
+  if (draft.selectedTeam === 'ALL') {
+    return 'Full Mock Draft';
+  }
+
+  if (draft.selectedTeam && draft.selectedTeam !== 'MULTI') {
+    return `${draft.selectedTeam} Mock Draft`;
+  }
+
+  return 'Untitled Draft';
+}
+
+function getDraftTeamLabel(draft) {
+  if (!draft) return '—';
+
+  if (draft.selectedTeam === 'ALL') return 'All 32 Teams';
+
+  if (Array.isArray(draft.selectedTeams) && draft.selectedTeams.length > 1) {
+    return `${draft.selectedTeams.length} Teams`;
+  }
+
+  if (draft.selectedTeam && draft.selectedTeam !== 'MULTI') {
+    return draft.selectedTeam;
+  }
+
+  return '—';
 }
 
 function makeInviteCode(length = 6) {
@@ -145,7 +187,7 @@ function DraftListCard({ drafts }) {
             <div key={draft.id} className="player-card">
               <div className="pick-header">
                 <div style={{ display: 'grid', gap: '6px' }}>
-                  <h4>{draft.title || 'Untitled Draft'}</h4>
+                  <h4>{getDraftTitle(draft)}</h4>
                   <div className="subtle">Created {formatDate(draft.createdAt)}</div>
                 </div>
 
@@ -156,7 +198,7 @@ function DraftListCard({ drafts }) {
               </div>
 
               <div className="inline-row" style={{ marginTop: '12px' }}>
-                <span className="team-pill">Team: {draft.selectedTeam || '—'}</span>
+                <span className="team-pill">Team: {getDraftTeamLabel(draft)}</span>
                 <span className="badge">
                   Updated: {formatDateTime(draft.updatedAt || draft.createdAt)}
                 </span>
@@ -282,7 +324,7 @@ export default function ProfilePage() {
 
     try {
       const draftsSnap = await getDocs(
-        query(collection(db, 'drafts'), where('ownerUid', '==', currentUser.uid))
+        query(collection(db, 'mocks'), where('ownerUid', '==', currentUser.uid))
       );
 
       const draftRows = draftsSnap.docs.map((item) => ({
@@ -292,7 +334,7 @@ export default function ProfilePage() {
 
       setDrafts(sortByNewest(draftRows, 'updatedAt'));
     } catch (error) {
-      console.error('[profile-page] drafts read failed', error);
+      console.error('[profile-page] mocks read failed', error);
       errors.push('drafts');
       setDrafts([]);
     }
