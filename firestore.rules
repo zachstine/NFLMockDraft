@@ -10,6 +10,12 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function isGroupMember(groupId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/groups/$(groupId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
+    }
+
     match /users/{userId} {
       allow read: if signedIn();
       allow create, update: if isSelf(userId);
@@ -20,8 +26,14 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid;
 
-      allow read: if signedIn()
-        && resource.data.ownerUid == request.auth.uid;
+      allow read: if signedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        (
+          resource.data.groupIds is list &&
+          resource.data.groupIds.size() > 0 &&
+          isGroupMember(resource.data.groupIds[0])
+        )
+      );
 
       allow update, delete: if signedIn()
         && resource.data.ownerUid == request.auth.uid;

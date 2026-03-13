@@ -107,7 +107,7 @@ export default function GroupPage() {
 
         const draftsSnap = await getDocs(
           query(
-            collection(db, 'drafts'),
+            collection(db, 'mocks'),
             where('groupIds', 'array-contains', groupId)
           )
         );
