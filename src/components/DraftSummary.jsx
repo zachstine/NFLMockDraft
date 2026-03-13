@@ -11,12 +11,47 @@ function getTeamMeta(teamAbbr) {
   return NFL_TEAMS.find((team) => normalizeTeamKey(team.abbr) === normalized) ?? null;
 }
 
-function formatPosition(player) {
-  return player?.position || player?.pos || '—';
+function getPlayerName(pick) {
+  return (
+    pick?.player?.name ||
+    pick?.playerName ||
+    pick?.name ||
+    'Unknown Player'
+  );
 }
 
-function formatSchool(player) {
-  return player?.school || player?.college || '—';
+function getPlayerPosition(pick) {
+  return (
+    pick?.player?.position ||
+    pick?.playerPosition ||
+    pick?.position ||
+    pick?.player?.pos ||
+    pick?.pos ||
+    '—'
+  );
+}
+
+function getPlayerSchool(pick) {
+  return (
+    pick?.player?.school ||
+    pick?.playerSchool ||
+    pick?.school ||
+    pick?.player?.college ||
+    pick?.college ||
+    '—'
+  );
+}
+
+function getOverall(pick) {
+  return pick?.overall ?? pick?.overallPick ?? 9999;
+}
+
+function getRound(pick) {
+  return pick?.round ?? '—';
+}
+
+function getPickInRound(pick) {
+  return pick?.pickInRound ?? pick?.roundPick ?? '—';
 }
 
 function buildTeamBuckets(picks) {
@@ -32,7 +67,7 @@ function buildTeamBuckets(picks) {
   return Array.from(map.entries())
     .map(([team, teamPicks]) => ({
       team,
-      picks: [...teamPicks].sort((a, b) => (a.overall ?? 9999) - (b.overall ?? 9999)),
+      picks: [...teamPicks].sort((a, b) => getOverall(a) - getOverall(b)),
     }))
     .sort((a, b) => a.team.localeCompare(b.team));
 }
@@ -41,7 +76,7 @@ function buildRoundBuckets(picks) {
   const map = new Map();
 
   for (const pick of picks) {
-    const round = Number(pick.round ?? 0);
+    const round = Number(getRound(pick));
     if (!map.has(round)) map.set(round, []);
     map.get(round).push(pick);
   }
@@ -49,7 +84,7 @@ function buildRoundBuckets(picks) {
   return Array.from(map.entries())
     .map(([round, roundPicks]) => ({
       round,
-      picks: [...roundPicks].sort((a, b) => (a.overall ?? 9999) - (b.overall ?? 9999)),
+      picks: [...roundPicks].sort((a, b) => getOverall(a) - getOverall(b)),
     }))
     .sort((a, b) => a.round - b.round);
 }
@@ -59,7 +94,7 @@ function buildOverview(picks) {
 
   const positionCounts = new Map();
   for (const pick of picks) {
-    const pos = formatPosition(pick.player);
+    const pos = getPlayerPosition(pick);
     positionCounts.set(pos, (positionCounts.get(pos) || 0) + 1);
   }
 
@@ -74,28 +109,29 @@ function buildOverview(picks) {
 }
 
 function PickRow({ pick }) {
-  const player = pick.player || {};
   const teamMeta = getTeamMeta(pick.team);
 
   return (
     <div className="draft-summary-pick-row">
       <div className="draft-summary-pick-main">
         <div className="draft-summary-pick-line">
-          <span className="draft-summary-chip">#{pick.overall}</span>
-          <span className="draft-summary-chip">R{pick.round}-P{pick.pickInRound}</span>
+          <span className="draft-summary-chip">#{getOverall(pick)}</span>
+          <span className="draft-summary-chip">
+            R{getRound(pick)}-P{getPickInRound(pick)}
+          </span>
           {teamMeta ? (
             <span className="draft-summary-chip">{teamMeta.name}</span>
           ) : (
-            <span className="draft-summary-chip">{pick.team}</span>
+            <span className="draft-summary-chip">{pick.team || '—'}</span>
           )}
         </div>
 
         <div className="draft-summary-player-name">
-          {player.name || 'Unknown Player'}
+          {getPlayerName(pick)}
         </div>
 
         <div className="draft-summary-player-meta">
-          {formatPosition(player)} • {formatSchool(player)}
+          {getPlayerPosition(pick)} • {getPlayerSchool(pick)}
         </div>
       </div>
     </div>
@@ -132,8 +168,11 @@ function OverviewTab({ picks }) {
       <div className="draft-summary-card">
         <h3 className="draft-summary-subheading">Full Draft Order</h3>
         <div className="draft-summary-list">
-          {picks.map((pick) => (
-            <PickRow key={`${pick.overall}-${pick.player?.id || pick.player?.name || 'pick'}`} pick={pick} />
+          {picks.map((pick, index) => (
+            <PickRow
+              key={`${getOverall(pick)}-${pick?.player?.id || pick?.playerId || pick?.playerName || index}`}
+              pick={pick}
+            />
           ))}
         </div>
       </div>
@@ -157,8 +196,11 @@ function ByTeamTab({ picks }) {
               </h3>
 
               <div className="draft-summary-list">
-                {bucket.picks.map((pick) => (
-                  <PickRow key={`${bucket.team}-${pick.overall}`} pick={pick} />
+                {bucket.picks.map((pick, index) => (
+                  <PickRow
+                    key={`${bucket.team}-${getOverall(pick)}-${index}`}
+                    pick={pick}
+                  />
                 ))}
               </div>
             </div>
@@ -182,8 +224,11 @@ function ByRoundTab({ picks }) {
             <h3 className="draft-summary-subheading">Round {bucket.round}</h3>
 
             <div className="draft-summary-list">
-              {bucket.picks.map((pick) => (
-                <PickRow key={`round-${bucket.round}-${pick.overall}`} pick={pick} />
+              {bucket.picks.map((pick, index) => (
+                <PickRow
+                  key={`round-${bucket.round}-${getOverall(pick)}-${index}`}
+                  pick={pick}
+                />
               ))}
             </div>
           </div>
@@ -209,7 +254,7 @@ export default function DraftSummary({
       ? mock.picks
       : [];
 
-    return [...source].sort((a, b) => (a.overall ?? 9999) - (b.overall ?? 9999));
+    return [...source].sort((a, b) => getOverall(a) - getOverall(b));
   }, [mock]);
 
   return (
