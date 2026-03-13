@@ -289,7 +289,7 @@ export default function GroupPage() {
     }
 
     if (group.ownerUid === user.uid) {
-      setActionError('The group owner cannot leave the group without transferring or deleting it.');
+      setActionError('The group owner cannot leave the group.');
       return;
     }
 
@@ -314,9 +314,7 @@ export default function GroupPage() {
         memberCount: Math.max((group.memberCount ?? currentMembers.length) - 1, 0),
       });
 
-      navigate('/profile', {
-        replace: true,
-      });
+      navigate('/profile', { replace: true });
     } catch (error) {
       console.error('[group-page] leave group failed', error);
       setActionError(error?.message || 'Could not leave group.');
