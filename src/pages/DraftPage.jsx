@@ -173,9 +173,8 @@ export default function DraftPage() {
   const isDraftCompleted = mockDraft?.status === 'completed';
 
   const cpuPickSpeedSeconds =
-    typeof mockDraft?.cpuPickSpeedSeconds === 'number' &&
-    [1, 3].includes(mockDraft.cpuPickSpeedSeconds)
-      ? mockDraft.cpuPickSpeedSeconds
+    mockDraft?.cpuPickSpeedSeconds === 1
+      ? 1
       : 3;
 
   const cpuPickDelayMs = cpuPickSpeedSeconds * 1000;
@@ -384,37 +383,35 @@ export default function DraftPage() {
     if (!mockDraft || !currentSlot) return;
     if (loadingPlayers) return;
     if (isDraftCompleted || isFinishing) return;
+    if (savingPick) return;
+    if (autoPickInFlightRef.current) return;
+    if (finishInFlightRef.current) return;
 
-    const interval = setInterval(async () => {
+    const latestUserControlledTeams =
+      mockDraft.selectedTeam === 'ALL'
+        ? NFL_TEAMS.map((team) => team.abbr)
+        : Array.isArray(mockDraft.selectedTeams) && mockDraft.selectedTeams.length > 0
+        ? mockDraft.selectedTeams
+        : mockDraft.selectedTeam && mockDraft.selectedTeam !== 'MULTI'
+        ? [mockDraft.selectedTeam]
+        : [];
+
+    const latestIsUserControlledPick = latestUserControlledTeams.includes(currentSlot.team);
+    if (latestIsUserControlledPick) return;
+
+    const bestAvailable = allAvailablePlayers[0];
+    if (!bestAvailable) return;
+
+    const timeoutId = window.setTimeout(async () => {
       if (autoPickInFlightRef.current) return;
-      if (savingPick) return;
       if (finishInFlightRef.current) return;
-
-      const latestCurrentIndex = mockDraft.currentPickIndex ?? 0;
-      const latestSlot = board[latestCurrentIndex] ?? null;
-      if (!latestSlot) return;
-
-      const latestUserControlledTeams =
-        mockDraft.selectedTeam === 'ALL'
-          ? NFL_TEAMS.map((team) => team.abbr)
-          : Array.isArray(mockDraft.selectedTeams) && mockDraft.selectedTeams.length > 0
-          ? mockDraft.selectedTeams
-          : mockDraft.selectedTeam && mockDraft.selectedTeam !== 'MULTI'
-          ? [mockDraft.selectedTeam]
-          : [];
-
-      const latestIsUserControlledPick = latestUserControlledTeams.includes(latestSlot.team);
-      if (latestIsUserControlledPick) return;
-
-      const bestAvailable = allAvailablePlayers[0];
-      if (!bestAvailable) return;
 
       autoPickInFlightRef.current = true;
       setCpuPickInFlight(true);
       setError('');
 
       try {
-        await makeDraftPick(mockId, latestSlot, bestAvailable, true);
+        await makeDraftPick(mockId, currentSlot, bestAvailable, true);
       } catch (pickError) {
         setError(pickError.message || 'Could not auto-pick.');
       } finally {
@@ -423,11 +420,10 @@ export default function DraftPage() {
       }
     }, cpuPickDelayMs);
 
-    return () => clearInterval(interval);
+    return () => window.clearTimeout(timeoutId);
   }, [
     mockDraft,
     currentSlot,
-    board,
     allAvailablePlayers,
     loadingPlayers,
     savingPick,
