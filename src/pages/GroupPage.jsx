@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   collection,
   deleteDoc,
@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   query,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import TopNav from '../components/TopNav';
@@ -106,6 +107,7 @@ function getSharedDraftStatusLabel(draft) {
 
 export default function GroupPage() {
   const { groupId } = useParams();
+  const navigate = useNavigate();
   const { user, profile } = useAuth();
 
   const [group, setGroup] = useState(null);
@@ -117,6 +119,8 @@ export default function GroupPage() {
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
   const [removingDraftId, setRemovingDraftId] = useState('');
+  const [leavingGroup, setLeavingGroup] = useState(false);
+  const [removingMemberUid, setRemovingMemberUid] = useState('');
 
   useEffect(() => {
     async function loadGroupPage() {
@@ -189,6 +193,7 @@ export default function GroupPage() {
           } catch (error) {
             console.error('[group-page] member profiles read failed', error);
             setMemberProfiles([]);
+            setActionError('Could not load member profiles.');
           }
         } else {
           setMemberProfiles([]);
@@ -226,6 +231,13 @@ export default function GroupPage() {
       draft.ownerUid === user.uid ||
       draft.sharedByUid === user.uid
     );
+  }
+
+  function canRemoveMember(member) {
+    if (!user?.uid || !group || !member?.id) return false;
+    if (!isOwner) return false;
+    if (member.id === group.ownerUid) return false;
+    return true;
   }
 
   async function handleRemoveSharedDraft(draft) {
@@ -267,6 +279,115 @@ export default function GroupPage() {
       setActionError(error?.message || 'Could not remove shared draft.');
     } finally {
       setRemovingDraftId('');
+    }
+  }
+
+  async function handleLeaveGroup() {
+    if (!user?.uid || !groupId || !group) {
+      setActionError('Could not leave the group.');
+      return;
+    }
+
+    if (group.ownerUid === user.uid) {
+      setActionError('The group owner cannot leave the group without transferring or deleting it.');
+      return;
+    }
+
+    const currentMembers = Array.isArray(group.memberUids) ? group.memberUids : [];
+    if (!currentMembers.includes(user.uid)) {
+      setActionError('You are not a member of this group.');
+      return;
+    }
+
+    const confirmed = window.confirm(`Leave ${group.name || 'this group'}?`);
+    if (!confirmed) return;
+
+    setLeavingGroup(true);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      const nextMemberUids = currentMembers.filter((uid) => uid !== user.uid);
+
+      await updateDoc(doc(db, 'groups', groupId), {
+        memberUids: nextMemberUids,
+        memberCount: Math.max((group.memberCount ?? currentMembers.length) - 1, 0),
+      });
+
+      navigate('/profile', {
+        replace: true,
+      });
+    } catch (error) {
+      console.error('[group-page] leave group failed', error);
+      setActionError(error?.message || 'Could not leave group.');
+    } finally {
+      setLeavingGroup(false);
+    }
+  }
+
+  async function handleRemoveMember(member) {
+    if (!user?.uid || !groupId || !group || !member?.id) {
+      setActionError('Could not remove member.');
+      return;
+    }
+
+    if (!isOwner) {
+      setActionError('Only the group owner can remove members.');
+      return;
+    }
+
+    if (member.id === group.ownerUid) {
+      setActionError('The group owner cannot be removed.');
+      return;
+    }
+
+    const currentMembers = Array.isArray(group.memberUids) ? group.memberUids : [];
+    if (!currentMembers.includes(member.id)) {
+      setActionError('That user is not currently a group member.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Remove ${member.username || 'this member'} from ${group.name || 'the group'}?`
+    );
+    if (!confirmed) return;
+
+    setRemovingMemberUid(member.id);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      const nextMemberUids = currentMembers.filter((uid) => uid !== member.id);
+
+      await updateDoc(doc(db, 'groups', groupId), {
+        memberUids: nextMemberUids,
+        memberCount: Math.max((group.memberCount ?? currentMembers.length) - 1, 0),
+      });
+
+      setGroup((currentGroup) =>
+        currentGroup
+          ? {
+              ...currentGroup,
+              memberUids: nextMemberUids,
+              memberCount: Math.max((currentGroup.memberCount ?? currentMembers.length) - 1, 0),
+            }
+          : currentGroup
+      );
+
+      setMemberProfiles((currentMembersList) =>
+        currentMembersList.filter((item) => item.id !== member.id)
+      );
+
+      setGroupDrafts((currentDrafts) =>
+        currentDrafts.filter((draft) => draft.ownerUid !== member.id && draft.sharedByUid !== member.id)
+      );
+
+      setActionSuccess(`${member.username || 'Member'} was removed from the group.`);
+    } catch (error) {
+      console.error('[group-page] remove member failed', error);
+      setActionError(error?.message || 'Could not remove member.');
+    } finally {
+      setRemovingMemberUid('');
     }
   }
 
@@ -347,6 +468,17 @@ export default function GroupPage() {
           </div>
 
           <div className="nav-actions">
+            {!isOwner ? (
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={handleLeaveGroup}
+                disabled={leavingGroup}
+              >
+                {leavingGroup ? 'Leaving...' : 'Leave Group'}
+              </button>
+            ) : null}
+
             <Link to="/profile" className="ghost-btn">
               Back to Profile
             </Link>
@@ -511,6 +643,21 @@ export default function GroupPage() {
                       <div className="subtle" style={{ marginTop: '12px' }}>
                         {member.bio?.trim() ? member.bio : 'No bio added yet.'}
                       </div>
+
+                      {canRemoveMember(member) ? (
+                        <div className="player-actions">
+                          <div className="inline-row">
+                            <button
+                              type="button"
+                              className="selector-action"
+                              onClick={() => handleRemoveMember(member)}
+                              disabled={removingMemberUid === member.id}
+                            >
+                              {removingMemberUid === member.id ? 'Removing...' : 'Remove Member'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
