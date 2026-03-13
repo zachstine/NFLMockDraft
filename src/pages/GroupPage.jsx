@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -81,6 +82,20 @@ function getSharedDraftTitle(draft) {
   return 'Untitled Draft';
 }
 
+function getSharedDraftTeamLabel(draft) {
+  if (draft.selectedTeam === 'ALL') return 'All 32 Teams';
+
+  if (Array.isArray(draft.selectedTeams) && draft.selectedTeams.length > 1) {
+    return `${draft.selectedTeams.length} Teams`;
+  }
+
+  if (draft.selectedTeam && draft.selectedTeam !== 'MULTI') {
+    return draft.selectedTeam;
+  }
+
+  return '—';
+}
+
 export default function GroupPage() {
   const { groupId } = useParams();
   const { user, profile } = useAuth();
@@ -91,6 +106,9 @@ export default function GroupPage() {
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState('');
   const [draftsError, setDraftsError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [actionSuccess, setActionSuccess] = useState('');
+  const [removingDraftId, setRemovingDraftId] = useState('');
 
   useEffect(() => {
     async function loadGroupPage() {
@@ -102,6 +120,8 @@ export default function GroupPage() {
       setLoading(true);
       setPageError('');
       setDraftsError('');
+      setActionError('');
+      setActionSuccess('');
       setGroup(null);
       setGroupDrafts([]);
       setMemberProfiles([]);
@@ -190,6 +210,58 @@ export default function GroupPage() {
     );
   }, [profile, user]);
 
+  function canRemoveSharedDraft(draft) {
+    if (!user?.uid || !draft || !group) return false;
+
+    return (
+      group.ownerUid === user.uid ||
+      draft.ownerUid === user.uid ||
+      draft.sharedByUid === user.uid
+    );
+  }
+
+  async function handleRemoveSharedDraft(draft) {
+    if (!user?.uid) {
+      setActionError('You must be signed in to remove a shared draft.');
+      return;
+    }
+
+    if (!draft?.id || !groupId) {
+      setActionError('No shared draft was selected.');
+      return;
+    }
+
+    if (!canRemoveSharedDraft(draft)) {
+      setActionError('You do not have permission to remove this shared draft.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Remove ${getSharedDraftTitle(draft)} from this group? The owner’s private draft will not be deleted.`
+    );
+
+    if (!confirmed) return;
+
+    setRemovingDraftId(draft.id);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      await deleteDoc(doc(db, 'groups', groupId, 'sharedMocks', draft.id));
+
+      setGroupDrafts((currentDrafts) =>
+        currentDrafts.filter((item) => item.id !== draft.id)
+      );
+
+      setActionSuccess(`${getSharedDraftTitle(draft)} was removed from the group.`);
+    } catch (error) {
+      console.error('[group-page] remove shared draft failed', error);
+      setActionError(error?.message || 'Could not remove shared draft.');
+    } finally {
+      setRemovingDraftId('');
+    }
+  }
+
   if (loading) {
     return (
       <div className="app-shell">
@@ -243,6 +315,18 @@ export default function GroupPage() {
     <div className="app-shell">
       <div className="page">
         <TopNav />
+
+        {actionError ? (
+          <div className="panel" style={{ marginBottom: '18px' }}>
+            <p className="error-text">{actionError}</p>
+          </div>
+        ) : null}
+
+        {actionSuccess ? (
+          <div className="panel" style={{ marginBottom: '18px' }}>
+            <p className="success-text">{actionSuccess}</p>
+          </div>
+        ) : null}
 
         <div className="top-nav" style={{ marginBottom: '18px' }}>
           <div className="brand-block">
@@ -331,9 +415,7 @@ export default function GroupPage() {
                         <div className="inline-row">
                           <span className="badge">{draft.status || 'Saved'}</span>
                           <span className="team-pill">
-                            {draft.selectedTeam === 'ALL'
-                              ? 'All 32 Teams'
-                              : draft.selectedTeam || '—'}
+                            {getSharedDraftTeamLabel(draft)}
                           </span>
                         </div>
                       </div>
@@ -357,6 +439,17 @@ export default function GroupPage() {
                           >
                             View Draft
                           </Link>
+
+                          {canRemoveSharedDraft(draft) ? (
+                            <button
+                              type="button"
+                              className="selector-action"
+                              onClick={() => handleRemoveSharedDraft(draft)}
+                              disabled={removingDraftId === draft.id}
+                            >
+                              {removingDraftId === draft.id ? 'Removing...' : 'Remove from Group'}
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </div>

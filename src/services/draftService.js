@@ -1,13 +1,17 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  setDoc,
+  where,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { getAllPlayers } from '../services/playerService';
@@ -39,6 +43,36 @@ export async function createMockDraft({
   });
 
   return mockRef.id;
+}
+
+export async function deleteMockDraft(mockId, currentUserUid) {
+  if (!mockId) {
+    throw new Error('Missing mockId.');
+  }
+
+  const mockRef = doc(db, 'mocks', mockId);
+  const mockSnap = await getDoc(mockRef);
+
+  if (!mockSnap.exists()) {
+    throw new Error('Draft not found.');
+  }
+
+  const data = mockSnap.data();
+
+  if (!currentUserUid || data.ownerUid !== currentUserUid) {
+    throw new Error('You do not have permission to delete this draft.');
+  }
+
+  await deleteDoc(mockRef);
+}
+
+export async function removeSharedMockFromGroup(groupId, mockId) {
+  if (!groupId || !mockId) {
+    throw new Error('Missing groupId or mockId.');
+  }
+
+  const sharedMockRef = doc(db, 'groups', groupId, 'sharedMocks', mockId);
+  await deleteDoc(sharedMockRef);
 }
 
 export function listenToMockDraft(mockId, callback) {

@@ -1002,3 +1002,24 @@ img {
   width: min(560px, 100%);
   padding: 20px;
 }
+.danger-button {
+  border: 1px solid #b42318;
+  background: #d92d20;
+  color: white;
+  border-radius: 10px;
+  padding: 0.55rem 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.danger-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

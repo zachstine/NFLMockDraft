@@ -4,6 +4,7 @@ import {
   addDoc,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -166,7 +167,7 @@ function ProfileStatCard({ label, value, sublabel }) {
   );
 }
 
-function DraftListCard({ drafts, onShareDraft }) {
+function DraftListCard({ drafts, onShareDraft, onDeleteDraft, deletingDraftId }) {
   return (
     <div className="panel">
       <div className="selector-header">
@@ -217,6 +218,14 @@ function DraftListCard({ drafts, onShareDraft }) {
                     onClick={() => onShareDraft(draft)}
                   >
                     Share to Group
+                  </button>
+                  <button
+                    type="button"
+                    className="selector-action"
+                    onClick={() => onDeleteDraft(draft)}
+                    disabled={deletingDraftId === draft.id}
+                  >
+                    {deletingDraftId === draft.id ? 'Deleting...' : 'Delete Draft'}
                   </button>
                 </div>
               </div>
@@ -300,6 +309,7 @@ export default function ProfilePage() {
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [joiningGroup, setJoiningGroup] = useState(false);
   const [sharingDraft, setSharingDraft] = useState(false);
+  const [deletingDraftId, setDeletingDraftId] = useState('');
 
   const [editUsername, setEditUsername] = useState('');
   const [editFavoriteTeam, setEditFavoriteTeam] = useState('');
@@ -422,6 +432,54 @@ export default function ProfilePage() {
     setDraftToShare(draft);
     setShareTargetGroupId(groups[0]?.id || '');
     setShowShareDraftModal(true);
+  }
+
+  async function handleDeleteDraft(draft) {
+    if (!user?.uid) {
+      setActionError('You must be signed in to delete a draft.');
+      return;
+    }
+
+    if (!draft?.id) {
+      setActionError('No draft selected to delete.');
+      return;
+    }
+
+    if ((draft.ownerUid || '') !== user.uid) {
+      setActionError('You can only delete your own drafts.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${getDraftTitle(draft)}? This cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingDraftId(draft.id);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      await deleteDoc(doc(db, 'mocks', draft.id));
+
+      setDrafts((currentDrafts) =>
+        currentDrafts.filter((item) => item.id !== draft.id)
+      );
+
+      if (draftToShare?.id === draft.id) {
+        setDraftToShare(null);
+        setShowShareDraftModal(false);
+        setShareTargetGroupId('');
+      }
+
+      setActionSuccess(`${getDraftTitle(draft)} was deleted.`);
+    } catch (error) {
+      console.error('[profile-page] delete draft failed', error);
+      setActionError(error?.message || 'Could not delete draft.');
+    } finally {
+      setDeletingDraftId('');
+    }
   }
 
   async function handleSaveProfile(event) {
@@ -739,8 +797,14 @@ export default function ProfilePage() {
         <div
           id="groups-section"
           className="draft-layout"
-          style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginTop: '18px' }}>
-          <DraftListCard drafts={drafts} onShareDraft={openShareDraftModal} />
+          style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginTop: '18px' }}
+        >
+          <DraftListCard
+            drafts={drafts}
+            onShareDraft={openShareDraftModal}
+            onDeleteDraft={handleDeleteDraft}
+            deletingDraftId={deletingDraftId}
+          />
           <GroupsListCard groups={groups} />
         </div>
 
