@@ -80,11 +80,6 @@ export async function makeDraftPick(mockId, currentSlot, player, isAuto = false)
     }
 
     const mockData = mockSnap.data();
-
-    if (mockData.ownerUid !== auth?.currentUser?.uid) {
-      throw new Error('You do not have permission to modify this mock draft.');
-    }
-
     const picks = mockData.picks ?? [];
     const alreadyDrafted = new Set(picks.map((pick) => pick.playerId));
 
