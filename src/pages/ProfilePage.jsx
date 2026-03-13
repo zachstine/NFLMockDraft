@@ -4,6 +4,7 @@ import {
   addDoc,
   arrayUnion,
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
@@ -14,6 +15,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import TopNav from '../components/TopNav';
@@ -167,7 +169,14 @@ function ProfileStatCard({ label, value, sublabel }) {
   );
 }
 
-function DraftListCard({ drafts, onShareDraft, onDeleteDraft, deletingDraftId }) {
+function DraftListCard({
+  drafts,
+  onShareDraft,
+  onDeleteDraft,
+  onRenameDraft,
+  deletingDraftId,
+  renamingDraftId,
+}) {
   return (
     <div className="panel">
       <div className="selector-header">
@@ -195,7 +204,20 @@ function DraftListCard({ drafts, onShareDraft, onDeleteDraft, deletingDraftId })
               <div key={draft.id} className="player-card">
                 <div className="pick-header">
                   <div style={{ display: 'grid', gap: '6px' }}>
-                    <h4>{getDraftTitle(draft)}</h4>
+                    <div className="inline-row" style={{ alignItems: 'center' }}>
+                      <h4 style={{ margin: 0 }}>{getDraftTitle(draft)}</h4>
+                      {isCompleted ? (
+                        <button
+                          type="button"
+                          className="selector-action"
+                          onClick={() => onRenameDraft(draft)}
+                          disabled={renamingDraftId === draft.id}
+                          style={{ padding: '6px 10px', fontSize: '0.82rem' }}
+                        >
+                          {renamingDraftId === draft.id ? 'Saving...' : 'Rename'}
+                        </button>
+                      ) : null}
+                    </div>
                     <div className="subtle">Created {formatDate(draft.createdAt)}</div>
                   </div>
 
@@ -313,12 +335,14 @@ export default function ProfilePage() {
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
   const [showShareDraftModal, setShowShareDraftModal] = useState(false);
+  const [showRenameDraftModal, setShowRenameDraftModal] = useState(false);
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [joiningGroup, setJoiningGroup] = useState(false);
   const [sharingDraft, setSharingDraft] = useState(false);
   const [deletingDraftId, setDeletingDraftId] = useState('');
+  const [renamingDraftId, setRenamingDraftId] = useState('');
 
   const [editUsername, setEditUsername] = useState('');
   const [editFavoriteTeam, setEditFavoriteTeam] = useState('');
@@ -330,6 +354,9 @@ export default function ProfilePage() {
 
   const [draftToShare, setDraftToShare] = useState(null);
   const [shareTargetGroupId, setShareTargetGroupId] = useState('');
+
+  const [draftToRename, setDraftToRename] = useState(null);
+  const [renameDraftTitle, setRenameDraftTitle] = useState('');
 
   async function loadProfilePageData(currentUser) {
     if (!currentUser?.uid) {
@@ -443,6 +470,14 @@ export default function ProfilePage() {
     setShowShareDraftModal(true);
   }
 
+  function openRenameDraftModal(draft) {
+    setActionError('');
+    setActionSuccess('');
+    setDraftToRename(draft);
+    setRenameDraftTitle(getDraftTitle(draft));
+    setShowRenameDraftModal(true);
+  }
+
   async function handleDeleteDraft(draft) {
     if (!user?.uid) {
       setActionError('You must be signed in to delete a draft.');
@@ -480,6 +515,12 @@ export default function ProfilePage() {
         setDraftToShare(null);
         setShowShareDraftModal(false);
         setShareTargetGroupId('');
+      }
+
+      if (draftToRename?.id === draft.id) {
+        setDraftToRename(null);
+        setShowRenameDraftModal(false);
+        setRenameDraftTitle('');
       }
 
       setActionSuccess(`${getDraftTitle(draft)} was deleted.`);
@@ -696,6 +737,83 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleRenameDraft(event) {
+    event.preventDefault();
+
+    if (!user?.uid) {
+      setActionError('You must be signed in to rename a draft.');
+      return;
+    }
+
+    if (!draftToRename?.id) {
+      setActionError('No draft selected to rename.');
+      return;
+    }
+
+    if ((draftToRename.ownerUid || '') !== user.uid) {
+      setActionError('You can only rename your own drafts.');
+      return;
+    }
+
+    const nextTitle = renameDraftTitle.trim();
+    if (!nextTitle) {
+      setActionError('Draft name cannot be empty.');
+      return;
+    }
+
+    setRenamingDraftId(draftToRename.id);
+    setActionError('');
+    setActionSuccess('');
+
+    try {
+      const batch = writeBatch(db);
+      const now = serverTimestamp();
+
+      batch.update(doc(db, 'mocks', draftToRename.id), {
+        title: nextTitle,
+        updatedAt: now,
+      });
+
+      const sharedSnapshots = await getDocs(
+        query(
+          collectionGroup(db, 'sharedMocks'),
+          where('sourceMockId', '==', draftToRename.id),
+          where('ownerUid', '==', user.uid)
+        )
+      );
+
+      sharedSnapshots.forEach((sharedDoc) => {
+        batch.update(sharedDoc.ref, {
+          title: nextTitle,
+          updatedAt: now,
+        });
+      });
+
+      await batch.commit();
+
+      setDrafts((currentDrafts) =>
+        currentDrafts.map((draft) =>
+          draft.id === draftToRename.id
+            ? {
+                ...draft,
+                title: nextTitle,
+              }
+            : draft
+        )
+      );
+
+      setActionSuccess(`Renamed draft to "${nextTitle}".`);
+      setShowRenameDraftModal(false);
+      setDraftToRename(null);
+      setRenameDraftTitle('');
+    } catch (error) {
+      console.error('[profile-page] rename draft failed', error);
+      setActionError(error?.message || 'Could not rename draft.');
+    } finally {
+      setRenamingDraftId('');
+    }
+  }
+
   if (loading) {
     return (
       <div className="app-shell">
@@ -816,7 +934,9 @@ export default function ProfilePage() {
             drafts={drafts}
             onShareDraft={openShareDraftModal}
             onDeleteDraft={handleDeleteDraft}
+            onRenameDraft={openRenameDraftModal}
             deletingDraftId={deletingDraftId}
+            renamingDraftId={renamingDraftId}
           />
           <GroupsListCard groups={groups} />
         </div>
@@ -959,6 +1079,36 @@ export default function ProfilePage() {
               {groups.length === 0 ? (
                 <div className="empty-state">Join or create a group before sharing drafts.</div>
               ) : null}
+            </form>
+          </ModalShell>
+        ) : null}
+
+        {showRenameDraftModal ? (
+          <ModalShell title="Rename Completed Draft" onClose={() => setShowRenameDraftModal(false)}>
+            <form className="form-grid" onSubmit={handleRenameDraft}>
+              <div className="field">
+                <label htmlFor="rename-draft-title">Draft Name</label>
+                <input
+                  id="rename-draft-title"
+                  value={renameDraftTitle}
+                  onChange={(event) => setRenameDraftTitle(event.target.value)}
+                  placeholder="2026 Falcons 7-Round Mock"
+                />
+              </div>
+
+              <div className="subtle">
+                This will update the draft title in your profile and in shared group copies tied to this draft.
+              </div>
+
+              <div className="inline-row">
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={renamingDraftId === draftToRename?.id}
+                >
+                  {renamingDraftId === draftToRename?.id ? 'Saving...' : 'Save Draft Name'}
+                </button>
+              </div>
             </form>
           </ModalShell>
         ) : null}
