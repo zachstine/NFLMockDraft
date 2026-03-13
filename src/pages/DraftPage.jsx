@@ -13,6 +13,7 @@ import {
 import { draftCapital2026 } from '../data/draftCapital2026';
 import { NFL_TEAMS } from '../data/teams';
 import { db } from '../lib/firebase';
+import { getBestCpuPick } from '../utils/draftLogic';
 
 const POSITION_ORDER = [
   'ALL',
@@ -399,8 +400,15 @@ export default function DraftPage() {
     const latestIsUserControlledPick = latestUserControlledTeams.includes(currentSlot.team);
     if (latestIsUserControlledPick) return;
 
-    const bestAvailable = allAvailablePlayers[0];
-    if (!bestAvailable) return;
+    const cpuPlayer = getBestCpuPick({
+      availablePlayers: allAvailablePlayers,
+      teamAbbr: currentSlot.team,
+      currentRound: currentSlot.round,
+      allPicks: mockDraft?.picks ?? [],
+      topN: 15,
+    });
+
+    if (!cpuPlayer) return;
 
     const timeoutId = window.setTimeout(async () => {
       if (autoPickInFlightRef.current) return;
@@ -411,7 +419,7 @@ export default function DraftPage() {
       setError('');
 
       try {
-        await makeDraftPick(mockId, currentSlot, bestAvailable, true);
+        await makeDraftPick(mockId, currentSlot, cpuPlayer, true);
       } catch (pickError) {
         setError(pickError.message || 'Could not auto-pick.');
       } finally {
