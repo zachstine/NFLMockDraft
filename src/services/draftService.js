@@ -21,10 +21,13 @@ export async function createMockDraft({
   selectedTeams = [],
   rounds,
   year,
+  cpuPickSpeedSeconds = 3,
 }) {
   if (!ownerUid) {
     throw new Error('Missing ownerUid for draft creation.');
   }
+
+  const normalizedCpuPickSpeedSeconds = cpuPickSpeedSeconds === 1 ? 1 : 3;
 
   const mockRef = await addDoc(collection(db, 'mocks'), {
     ownerUid,
@@ -33,6 +36,7 @@ export async function createMockDraft({
     selectedTeams,
     rounds,
     year,
+    cpuPickSpeedSeconds: normalizedCpuPickSpeedSeconds,
     currentPickIndex: 0,
     status: 'active',
     picks: [],
@@ -99,7 +103,10 @@ export async function getPlayersForYear(year) {
       }));
     }
   } catch (error) {
-    console.warn('[draftService] Firestore draftClasses read failed, falling back to local players.', error);
+    console.warn(
+      '[draftService] Firestore draftClasses read failed, falling back to local players.',
+      error
+    );
   }
 
   const localPlayers = await getAllPlayers(String(year));
