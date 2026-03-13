@@ -10,7 +10,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { samplePlayers } from '../data/samplePlayers';
+import { getAllPlayers } from '../services/playerService';
 
 export async function createMockDraft({
   ownerUid,
@@ -60,7 +60,7 @@ export async function getPlayersForYear(year) {
   const snapshot = await getDocs(playersQuery);
 
   if (snapshot.empty) {
-    return samplePlayers;
+    return getAllPlayers;
   }
 
   return snapshot.docs.map((docSnapshot) => ({
