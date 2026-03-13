@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NFL_TEAMS } from '../data/teams';
+import { getPlayersForYear } from '../services/draftService';
 
 function normalizeTeamKey(teamValue) {
   if (!teamValue) return '';
@@ -11,41 +12,11 @@ function getTeamMeta(teamAbbr) {
   return NFL_TEAMS.find((team) => normalizeTeamKey(team.abbr) === normalized) ?? null;
 }
 
-function getPlayerName(pick) {
+function getPlayerId(pick) {
   return (
-    pick?.player?.name ||
-    pick?.player?.fullName ||
-    pick?.playerName ||
-    pick?.fullName ||
-    pick?.name ||
-    'Unknown Player'
-  );
-}
-
-function getPlayerPosition(pick) {
-  const rawPosition =
-    pick?.player?.position ||
-    pick?.playerPosition ||
-    pick?.position ||
-    pick?.player?.pos ||
-    pick?.pos ||
-    pick?.player?.primaryPosition ||
-    pick?.primaryPosition ||
-    pick?.player?.listedPosition ||
-    pick?.listedPosition ||
-    '';
-
-  return rawPosition ? String(rawPosition).trim().toUpperCase() : '—';
-}
-
-function getPlayerSchool(pick) {
-  return (
-    pick?.player?.school ||
-    pick?.playerSchool ||
-    pick?.school ||
-    pick?.player?.college ||
-    pick?.college ||
-    '—'
+    pick?.player?.id ||
+    pick?.playerId ||
+    null
   );
 }
 
@@ -59,6 +30,57 @@ function getRound(pick) {
 
 function getPickInRound(pick) {
   return pick?.pickInRound ?? pick?.roundPick ?? '—';
+}
+
+function getPlayerName(pick, playerLookup) {
+  const fallbackPlayer = playerLookup.get(getPlayerId(pick));
+
+  return (
+    pick?.player?.name ||
+    pick?.player?.fullName ||
+    pick?.playerName ||
+    pick?.fullName ||
+    pick?.name ||
+    fallbackPlayer?.fullName ||
+    fallbackPlayer?.name ||
+    'Unknown Player'
+  );
+}
+
+function getPlayerPosition(pick, playerLookup) {
+  const fallbackPlayer = playerLookup.get(getPlayerId(pick));
+
+  const rawPosition =
+    pick?.player?.position ||
+    pick?.playerPosition ||
+    pick?.position ||
+    pick?.player?.pos ||
+    pick?.pos ||
+    pick?.player?.primaryPosition ||
+    pick?.primaryPosition ||
+    pick?.player?.listedPosition ||
+    pick?.listedPosition ||
+    fallbackPlayer?.position ||
+    fallbackPlayer?.pos ||
+    fallbackPlayer?.primaryPosition ||
+    '';
+
+  return rawPosition ? String(rawPosition).trim().toUpperCase() : '—';
+}
+
+function getPlayerSchool(pick, playerLookup) {
+  const fallbackPlayer = playerLookup.get(getPlayerId(pick));
+
+  return (
+    pick?.player?.school ||
+    pick?.playerSchool ||
+    pick?.school ||
+    pick?.player?.college ||
+    pick?.college ||
+    fallbackPlayer?.school ||
+    fallbackPlayer?.college ||
+    '—'
+  );
 }
 
 function buildTeamBuckets(picks) {
@@ -99,12 +121,12 @@ function buildRoundBuckets(picks) {
     .sort((a, b) => a.round - b.round);
 }
 
-function buildOverview(picks) {
+function buildOverview(picks, playerLookup) {
   const completedPicks = Array.isArray(picks) ? picks.length : 0;
 
   const positionCounts = new Map();
   for (const pick of picks) {
-    const pos = getPlayerPosition(pick);
+    const pos = getPlayerPosition(pick, playerLookup);
     positionCounts.set(pos, (positionCounts.get(pos) || 0) + 1);
   }
 
@@ -118,7 +140,7 @@ function buildOverview(picks) {
   };
 }
 
-function PickRow({ pick }) {
+function PickRow({ pick, playerLookup }) {
   const teamMeta = getTeamMeta(pick.team);
 
   return (
@@ -137,19 +159,19 @@ function PickRow({ pick }) {
         </div>
 
         <div className="draft-summary-player-name">
-          {getPlayerName(pick)}
+          {getPlayerName(pick, playerLookup)}
         </div>
 
         <div className="draft-summary-player-meta">
-          {getPlayerPosition(pick)} • {getPlayerSchool(pick)}
+          {getPlayerPosition(pick, playerLookup)} • {getPlayerSchool(pick, playerLookup)}
         </div>
       </div>
     </div>
   );
 }
 
-function OverviewTab({ picks }) {
-  const overview = useMemo(() => buildOverview(picks), [picks]);
+function OverviewTab({ picks, playerLookup }) {
+  const overview = useMemo(() => buildOverview(picks, playerLookup), [picks, playerLookup]);
 
   return (
     <div className="draft-summary-section">
@@ -180,8 +202,9 @@ function OverviewTab({ picks }) {
         <div className="draft-summary-list">
           {picks.map((pick, index) => (
             <PickRow
-              key={`${getOverall(pick)}-${pick?.player?.id || pick?.playerId || pick?.playerName || index}`}
+              key={`${getOverall(pick)}-${getPlayerId(pick) || pick?.playerName || index}`}
               pick={pick}
+              playerLookup={playerLookup}
             />
           ))}
         </div>
@@ -190,7 +213,7 @@ function OverviewTab({ picks }) {
   );
 }
 
-function ByTeamTab({ picks }) {
+function ByTeamTab({ picks, playerLookup }) {
   const teamBuckets = useMemo(() => buildTeamBuckets(picks), [picks]);
 
   return (
@@ -210,6 +233,7 @@ function ByTeamTab({ picks }) {
                   <PickRow
                     key={`${bucket.team}-${getOverall(pick)}-${index}`}
                     pick={pick}
+                    playerLookup={playerLookup}
                   />
                 ))}
               </div>
@@ -223,7 +247,7 @@ function ByTeamTab({ picks }) {
   );
 }
 
-function ByRoundTab({ picks }) {
+function ByRoundTab({ picks, playerLookup }) {
   const roundBuckets = useMemo(() => buildRoundBuckets(picks), [picks]);
 
   return (
@@ -238,6 +262,7 @@ function ByRoundTab({ picks }) {
                 <PickRow
                   key={`round-${bucket.round}-${getOverall(pick)}-${index}`}
                   pick={pick}
+                  playerLookup={playerLookup}
                 />
               ))}
             </div>
@@ -256,6 +281,40 @@ export default function DraftSummary({
   subtitle = '',
 }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [players, setPlayers] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPlayers() {
+      try {
+        const loadedPlayers = await getPlayersForYear('2026');
+        if (!cancelled) {
+          setPlayers(Array.isArray(loadedPlayers) ? loadedPlayers : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setPlayers([]);
+        }
+      }
+    }
+
+    loadPlayers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const playerLookup = useMemo(() => {
+    const map = new Map();
+    for (const player of players) {
+      if (player?.id) {
+        map.set(player.id, player);
+      }
+    }
+    return map;
+  }, [players]);
 
   const picks = useMemo(() => {
     const source = Array.isArray(mock?.completedPicks)
@@ -308,9 +367,9 @@ export default function DraftSummary({
         </button>
       </div>
 
-      {activeTab === 'overview' && <OverviewTab picks={picks} />}
-      {activeTab === 'team' && <ByTeamTab picks={picks} />}
-      {activeTab === 'round' && <ByRoundTab picks={picks} />}
+      {activeTab === 'overview' && <OverviewTab picks={picks} playerLookup={playerLookup} />}
+      {activeTab === 'team' && <ByTeamTab picks={picks} playerLookup={playerLookup} />}
+      {activeTab === 'round' && <ByRoundTab picks={picks} playerLookup={playerLookup} />}
     </div>
   );
 }
