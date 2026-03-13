@@ -69,7 +69,6 @@ export default function PlayerList({
 
               <div className="inline-row" style={{ marginTop: '10px' }}>
                 <span className="badge">Team Rank #{player.teamRank ?? player.overallRank}</span>
-                <span className="badge">Source: {player.source ?? 'manual'}</span>
               </div>
 
               <div className="player-actions">
