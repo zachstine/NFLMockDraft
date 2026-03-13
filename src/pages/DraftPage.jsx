@@ -43,10 +43,13 @@ const POSITION_GROUP_MAP = {
   OT: 'OL',
   OG: 'OL',
   C: 'OL',
+  OL: 'OL',
+  IOL: 'OL',
   EDGE: 'DL',
   DE: 'DL',
   DT: 'DL',
   NT: 'DL',
+  DL: 'DL',
   LB: 'LB',
   ILB: 'LB',
   OLB: 'LB',
@@ -54,8 +57,10 @@ const POSITION_GROUP_MAP = {
   S: 'DB',
   FS: 'DB',
   SS: 'DB',
+  DB: 'DB',
   K: 'ST',
   P: 'ST',
+  ST: 'ST',
 };
 
 function getUpcomingPicks(teamAbbr, currentOverallPick) {
@@ -562,8 +567,10 @@ export default function DraftPage() {
       const position = normalizePosition(pick?.playerPosition || pick?.position);
       if (!position) continue;
 
+      const groupedPosition = getPositionGroup(position);
+
       set.add(position);
-      set.add(getPositionGroup(position));
+      set.add(groupedPosition);
     }
 
     return set;
@@ -680,7 +687,10 @@ export default function DraftPage() {
                           Array.isArray(activeTeamNeeds?.[tier])
                             ? activeTeamNeeds[tier].map((need) => {
                                 const normalizedNeed = normalizePosition(need);
-                                const isFilled = draftedNeedSet.has(normalizedNeed);
+                                const groupedNeed = getPositionGroup(normalizedNeed);
+                                const isFilled =
+                                  draftedNeedSet.has(normalizedNeed) ||
+                                  draftedNeedSet.has(groupedNeed);
 
                                 return (
                                   <span
@@ -704,15 +714,6 @@ export default function DraftPage() {
                                         : `${tier} need`
                                     }
                                   >
-                                    <span
-                                      style={{
-                                        opacity: 0.8,
-                                        fontSize: '0.72rem',
-                                        textTransform: 'uppercase',
-                                      }}
-                                    >
-                                      {tier === 'high' ? 'H' : 'M'}
-                                    </span>
                                     <span>{need}</span>
                                     {isFilled ? <span style={{ fontSize: '0.78rem' }}>✓</span> : null}
                                   </span>
