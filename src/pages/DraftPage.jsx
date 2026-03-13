@@ -644,9 +644,21 @@ export default function DraftPage() {
 
                 <div
                   className="filter-row"
-                  style={{ alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}
+                  style={{
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                  }}
                 >
-                  <div className="field" style={{ minWidth: '200px', margin: 0 }}>
+                  <div
+                    className="field"
+                    style={{
+                      minWidth: '160px',
+                      width: '160px',
+                      flex: '0 0 160px',
+                      margin: 0,
+                    }}
+                  >
                     <label htmlFor="position-filter">Position</label>
                     <select
                       id="position-filter"
@@ -669,7 +681,7 @@ export default function DraftPage() {
                         flexDirection: 'column',
                         gap: '6px',
                         minWidth: '280px',
-                        flex: 1,
+                        flex: '1 1 320px',
                       }}
                     >
                       <div className="subtle" style={{ lineHeight: 1.2 }}>
@@ -725,7 +737,17 @@ export default function DraftPage() {
                     </div>
                   )}
 
-                  <div className="inline-row" style={{ marginLeft: 'auto', flexWrap: 'wrap' }}>
+                  <div
+                    className="inline-row"
+                    style={{
+                      marginLeft: 'auto',
+                      flexWrap: 'wrap',
+                      justifyContent: 'flex-end',
+                      alignItems: 'center',
+                      flex: '0 0 auto',
+                      minWidth: '220px',
+                    }}
+                  >
                     {savingPick && <span className="subtle">Saving pick...</span>}
 
                     {isFinishing && <span className="subtle">Finalizing draft...</span>}
