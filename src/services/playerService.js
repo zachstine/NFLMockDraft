@@ -6,11 +6,14 @@ const POSITION_MAP = {
   T: 'OT',
   OT: 'OT',
 
-  G: 'IOL',
-  OG: 'IOL',
-  LG: 'IOL',
-  RG: 'IOL',
-  C: 'IOL',
+  G: 'OG',
+  OG: 'OG',
+  LG: 'OG',
+  RG: 'OG',
+
+  C: 'C',
+  OC: 'C',
+
   IOL: 'IOL',
 
   DE: 'EDGE',
