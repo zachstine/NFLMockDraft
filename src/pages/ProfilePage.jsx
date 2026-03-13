@@ -4,7 +4,6 @@ import {
   addDoc,
   arrayUnion,
   collection,
-  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
@@ -15,7 +14,6 @@ import {
   setDoc,
   updateDoc,
   where,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import TopNav from '../components/TopNav';
@@ -766,30 +764,30 @@ export default function ProfilePage() {
     setActionSuccess('');
 
     try {
-      const batch = writeBatch(db);
-      const now = serverTimestamp();
-
-      batch.update(doc(db, 'mocks', draftToRename.id), {
+      await updateDoc(doc(db, 'mocks', draftToRename.id), {
         title: nextTitle,
-        updatedAt: now,
+        updatedAt: serverTimestamp(),
       });
 
-      const sharedSnapshots = await getDocs(
-        query(
-          collectionGroup(db, 'sharedMocks'),
-          where('sourceMockId', '==', draftToRename.id),
-          where('ownerUid', '==', user.uid)
-        )
+      const sharedUpdateResults = await Promise.allSettled(
+        groups.map(async (group) => {
+          const sharedRef = doc(db, 'groups', group.id, 'sharedMocks', draftToRename.id);
+          const sharedSnap = await getDoc(sharedRef);
+
+          if (!sharedSnap.exists()) return null;
+
+          await updateDoc(sharedRef, {
+            title: nextTitle,
+            updatedAt: serverTimestamp(),
+          });
+
+          return group.id;
+        })
       );
 
-      sharedSnapshots.forEach((sharedDoc) => {
-        batch.update(sharedDoc.ref, {
-          title: nextTitle,
-          updatedAt: now,
-        });
-      });
-
-      await batch.commit();
+      const successfulSharedUpdates = sharedUpdateResults.filter(
+        (result) => result.status === 'fulfilled' && result.value
+      ).length;
 
       setDrafts((currentDrafts) =>
         currentDrafts.map((draft) =>
@@ -802,7 +800,23 @@ export default function ProfilePage() {
         )
       );
 
-      setActionSuccess(`Renamed draft to "${nextTitle}".`);
+      if (draftToShare?.id === draftToRename.id) {
+        setDraftToShare((current) =>
+          current
+            ? {
+                ...current,
+                title: nextTitle,
+              }
+            : current
+        );
+      }
+
+      setActionSuccess(
+        successfulSharedUpdates > 0
+          ? `Renamed draft to "${nextTitle}" and synced ${successfulSharedUpdates} shared copie${successfulSharedUpdates === 1 ? 'y' : 's'}.`
+          : `Renamed draft to "${nextTitle}".`
+      );
+
       setShowRenameDraftModal(false);
       setDraftToRename(null);
       setRenameDraftTitle('');
@@ -1097,7 +1111,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="subtle">
-                This will update the draft title in your profile and in shared group copies tied to this draft.
+                This will update the draft title in your profile and attempt to sync shared group copies too.
               </div>
 
               <div className="inline-row">
