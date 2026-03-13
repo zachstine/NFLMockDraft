@@ -37,6 +37,36 @@ function getUpcomingPicks(teamAbbr, currentOverallPick) {
   return allPicks.filter((pickNumber) => pickNumber >= currentOverallPick);
 }
 
+function getSafePlayerName(player, fallbackPick) {
+  return (
+    player?.fullName ||
+    player?.name ||
+    fallbackPick?.playerName ||
+    'Unknown Player'
+  );
+}
+
+function getSafePlayerPosition(player, fallbackPick) {
+  return (
+    player?.position ||
+    player?.pos ||
+    player?.primaryPosition ||
+    fallbackPick?.playerPosition ||
+    fallbackPick?.position ||
+    ''
+  );
+}
+
+function getSafePlayerSchool(player, fallbackPick) {
+  return (
+    player?.school ||
+    player?.college ||
+    fallbackPick?.playerSchool ||
+    fallbackPick?.school ||
+    ''
+  );
+}
+
 export default function DraftPage() {
   const { mockId } = useParams();
   const navigate = useNavigate();
@@ -76,7 +106,7 @@ export default function DraftPage() {
       try {
         const loadedPlayers = await getPlayersForYear('2026');
         if (!cancelled) {
-          setPlayers(loadedPlayers);
+          setPlayers(Array.isArray(loadedPlayers) ? loadedPlayers : []);
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -104,7 +134,9 @@ export default function DraftPage() {
   const playersById = useMemo(() => {
     const map = new Map();
     for (const player of players) {
-      map.set(player.id, player);
+      if (player?.id) {
+        map.set(player.id, player);
+      }
     }
     return map;
   }, [players]);
@@ -194,41 +226,67 @@ export default function DraftPage() {
     const picks = mockDraft?.picks ?? [];
 
     return [...picks]
-      .map((pick) => {
+      .map((pick, index) => {
         const playerFromPool = playersById.get(pick.playerId);
+        const boardSlot =
+          board.find((slot) => {
+            const slotOverall = slot?.overall ?? null;
+            const pickOverall = pick?.overall ?? pick?.overallPick ?? null;
+            return slotOverall != null && pickOverall != null && slotOverall === pickOverall;
+          }) ?? board[index] ?? null;
+
+        const overall =
+          pick?.overall ??
+          pick?.overallPick ??
+          boardSlot?.overall ??
+          null;
+
+        const round =
+          pick?.round ??
+          boardSlot?.round ??
+          null;
+
+        const pickInRound =
+          pick?.pickInRound ??
+          pick?.roundPick ??
+          boardSlot?.pickInRound ??
+          null;
+
+        const playerId = pick?.playerId ?? playerFromPool?.id ?? null;
+        const playerName = getSafePlayerName(playerFromPool, pick);
+        const playerPosition = getSafePlayerPosition(playerFromPool, pick);
+        const playerSchool = getSafePlayerSchool(playerFromPool, pick);
 
         return {
-          overall: pick.overall ?? null,
-          round: pick.round ?? null,
-          pickInRound: pick.pickInRound ?? null,
-          team: pick.team ?? '',
+          overall,
+          overallPick: overall,
+          round,
+          pickInRound,
+          roundPick: pickInRound,
+          team: pick?.team ?? boardSlot?.team ?? '',
+          playerId,
+          playerName,
+          playerPosition,
+          playerSchool,
+          position: playerPosition,
+          school: playerSchool,
           player: {
-            id: pick.playerId ?? playerFromPool?.id ?? null,
-            name:
-              pick.playerName ||
-              playerFromPool?.fullName ||
-              playerFromPool?.name ||
-              'Unknown Player',
-            position:
-              pick.playerPosition ||
-              playerFromPool?.position ||
-              '',
-            school:
-              pick.playerSchool ||
-              playerFromPool?.school ||
-              playerFromPool?.college ||
-              '',
+            id: playerId,
+            name: playerName,
+            position: playerPosition,
+            school: playerSchool,
           },
-          draftedAt: pick.draftedAt ?? null,
-          isAuto: Boolean(pick.isAuto),
+          draftedAt: pick?.draftedAt ?? null,
+          isAuto: Boolean(pick?.isAuto),
         };
       })
       .sort((a, b) => (a.overall ?? 9999) - (b.overall ?? 9999));
-  }, [mockDraft, playersById]);
+  }, [mockDraft, playersById, board]);
 
   async function finishDraft({ auto = false } = {}) {
     if (!mockDraft || !mockId) return;
     if (finishInFlightRef.current) return;
+
     if (isDraftCompleted) {
       if (!redirectedToSummaryRef.current) {
         redirectedToSummaryRef.current = true;
@@ -238,6 +296,7 @@ export default function DraftPage() {
     }
 
     const picksToSave = completedPicksForSummary;
+
     if (!picksToSave.length) {
       if (!auto) {
         setError('Make at least one pick before finishing the draft.');
