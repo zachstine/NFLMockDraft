@@ -45,7 +45,7 @@ export default function DraftPage() {
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [savingPick, setSavingPick] = useState(false);
-  const [autoPicking, setAutoPicking] = useState(false);
+  const [cpuPickInFlight, setCpuPickInFlight] = useState(false);
   const [error, setError] = useState('');
   const [selectedRound, setSelectedRound] = useState('ALL');
 
@@ -129,6 +129,13 @@ export default function DraftPage() {
     return mockDraft.selectedTeam === 'ALL' || mockDraft.selectedTeam === currentSlot.team;
   }, [mockDraft, currentSlot]);
 
+  const cpuOnClock = useMemo(() => {
+    if (!mockDraft || !currentSlot) return false;
+    if (loadingPlayers) return false;
+    if (mockDraft.selectedTeam === 'ALL') return false;
+    return currentSlot.team !== mockDraft.selectedTeam;
+  }, [mockDraft, currentSlot, loadingPlayers]);
+
   async function handlePick(player, { isAuto = false } = {}) {
     if (!mockDraft || !currentSlot || !player) return;
 
@@ -165,7 +172,7 @@ export default function DraftPage() {
       if (!bestAvailable) return;
 
       autoPickInFlightRef.current = true;
-      setAutoPicking(true);
+      setCpuPickInFlight(true);
       setError('');
 
       try {
@@ -174,7 +181,7 @@ export default function DraftPage() {
         setError(pickError.message || 'Could not auto-pick.');
       } finally {
         autoPickInFlightRef.current = false;
-        setAutoPicking(false);
+        setCpuPickInFlight(false);
       }
     }, 3000);
 
@@ -263,7 +270,13 @@ export default function DraftPage() {
 
                   <div className="inline-row">
                     {savingPick && <span className="subtle">Saving pick...</span>}
-                    {autoPicking && <span className="subtle">Auto-picking for CPU team...</span>}
+                    {cpuOnClock && (
+                      <span className="subtle">
+                        {cpuPickInFlight
+                          ? 'Auto-picking for CPU team...'
+                          : 'CPU team on the clock...'}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -274,7 +287,7 @@ export default function DraftPage() {
             <PlayerList
               players={availablePlayers}
               currentSlot={currentSlot}
-              canUserPick={canUserPick && !savingPick && !autoPicking}
+              canUserPick={canUserPick && !savingPick && !cpuPickInFlight}
               onPick={handlePick}
               loading={loadingPlayers}
               activeTeam={activeTeam}
