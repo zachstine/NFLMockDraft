@@ -61,6 +61,20 @@ function getDisplayUsername(profile, user) {
   );
 }
 
+function getFriendlyErrorMessage(error) {
+  if (!error) return 'Could not start draft.';
+
+  if (error.code === 'permission-denied') {
+    return 'Firestore denied permission while creating the draft. This usually means the draftService write pattern does not match your Firestore rules.';
+  }
+
+  if (error.code === 'unauthenticated') {
+    return 'You must be logged in to start a draft.';
+  }
+
+  return error.message || 'Could not start draft.';
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -118,7 +132,7 @@ export default function HomePage() {
         throw new Error('Select rounds or choose Select All.');
       }
 
-      const mockId = await createMockDraft({
+      const payload = {
         ownerUid: user.uid,
         username: profile?.username ?? 'GM',
         selectedTeams,
@@ -130,12 +144,20 @@ export default function HomePage() {
             : 'MULTI',
         rounds: rounds === 'ALL' ? 7 : Number(rounds),
         year: '2026',
-      });
+      };
+
+      console.log('[home-page] createMockDraft payload', payload);
+
+      const mockId = await createMockDraft(payload);
+
+      console.log('[home-page] draft created', mockId);
 
       navigate(`/draft/${mockId}`);
     } catch (startError) {
-      console.error('Start draft failed:', startError);
-      setError(startError.message || 'Could not start draft.');
+      console.error('[home-page] Start draft failed:', startError);
+      console.error('[home-page] Firebase error code:', startError?.code);
+      console.error('[home-page] Firebase error message:', startError?.message);
+      setError(getFriendlyErrorMessage(startError));
     } finally {
       setStarting(false);
     }
