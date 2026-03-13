@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TopNav from '../components/TopNav';
 import DraftBoard from '../components/DraftBoard';
@@ -49,6 +49,8 @@ export default function DraftPage() {
   const [error, setError] = useState('');
   const [selectedRound, setSelectedRound] = useState('ALL');
 
+  const autoPickLockRef = useRef(null);
+
   useEffect(() => {
     const unsubscribe = listenToMockDraft(mockId, (nextMock) => {
       if (!nextMock) {
@@ -98,11 +100,16 @@ export default function DraftPage() {
     return new Set((mockDraft?.picks ?? []).map((pick) => pick.playerId));
   }, [mockDraft]);
 
+  const allAvailablePlayers = useMemo(() => {
+    return players
+      .filter((player) => !draftedPlayerIds.has(player.id))
+      .sort((a, b) => a.overallRank - b.overallRank);
+  }, [players, draftedPlayerIds]);
+
   const availablePlayers = useMemo(() => {
     const lowerSearch = search.trim().toLowerCase();
 
-    return players
-      .filter((player) => !draftedPlayerIds.has(player.id))
+    return allAvailablePlayers
       .filter((player) => positionFilter === 'ALL' || player.position === positionFilter)
       .filter((player) => {
         if (!lowerSearch) return true;
@@ -112,9 +119,8 @@ export default function DraftPage() {
           player.school.toLowerCase().includes(lowerSearch) ||
           player.position.toLowerCase().includes(lowerSearch)
         );
-      })
-      .sort((a, b) => a.overallRank - b.overallRank);
-  }, [players, draftedPlayerIds, positionFilter, search]);
+      });
+  }, [allAvailablePlayers, positionFilter, search]);
 
   const currentSlot = board[mockDraft?.currentPickIndex ?? 0] ?? null;
 
@@ -123,8 +129,17 @@ export default function DraftPage() {
     return mockDraft.selectedTeam === 'ALL' || mockDraft.selectedTeam === currentSlot.team;
   }, [mockDraft, currentSlot]);
 
+  useEffect(() => {
+    if (!currentSlot) {
+      autoPickLockRef.current = null;
+      return;
+    }
+
+    autoPickLockRef.current = null;
+  }, [currentSlot?.overall]);
+
   async function handlePick(player, { isAuto = false } = {}) {
-    if (!mockDraft || !currentSlot) return;
+    if (!mockDraft || !currentSlot || !player) return;
 
     setSavingPick(true);
     setError('');
@@ -133,6 +148,7 @@ export default function DraftPage() {
       await makeDraftPick(mockId, currentSlot, player, isAuto);
     } catch (pickError) {
       setError(pickError.message || 'Could not save pick.');
+      throw pickError;
     } finally {
       setSavingPick(false);
     }
@@ -140,26 +156,36 @@ export default function DraftPage() {
 
   useEffect(() => {
     if (!mockDraft || !currentSlot) return;
+    if (loadingPlayers) return;
     if (mockDraft.selectedTeam === 'ALL') return;
     if (currentSlot.team === mockDraft.selectedTeam) return;
     if (savingPick || autoPicking) return;
 
-    const bestAvailable = players
-      .filter((player) => !draftedPlayerIds.has(player.id))
-      .sort((a, b) => a.overallRank - b.overallRank)[0];
+    const slotKey = `${mockId}-${currentSlot.overall}`;
+    if (autoPickLockRef.current === slotKey) return;
 
+    const bestAvailable = allAvailablePlayers[0];
     if (!bestAvailable) return;
 
-    let ignore = false;
+    autoPickLockRef.current = slotKey;
+
+    let cancelled = false;
 
     async function runAutoPick() {
       setAutoPicking(true);
+      setError('');
+
       try {
-        if (!ignore) {
-          await handlePick(bestAvailable, { isAuto: true });
+        if (!cancelled) {
+          await makeDraftPick(mockId, currentSlot, bestAvailable, true);
+        }
+      } catch (pickError) {
+        if (!cancelled) {
+          setError(pickError.message || 'Could not auto-pick.');
+          autoPickLockRef.current = null;
         }
       } finally {
-        if (!ignore) {
+        if (!cancelled) {
           setAutoPicking(false);
         }
       }
@@ -168,9 +194,17 @@ export default function DraftPage() {
     runAutoPick();
 
     return () => {
-      ignore = true;
+      cancelled = true;
     };
-  }, [mockDraft, currentSlot, players, draftedPlayerIds, savingPick, autoPicking]);
+  }, [
+    mockId,
+    mockDraft,
+    currentSlot,
+    allAvailablePlayers,
+    loadingPlayers,
+    savingPick,
+    autoPicking,
+  ]);
 
   if (!mockDraft) {
     return <div className="loading-screen">Loading draft...</div>;
