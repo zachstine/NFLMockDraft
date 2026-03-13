@@ -22,10 +22,17 @@ export default function TopNav() {
   const isProfile = location.pathname === '/profile';
   const isDraftPage = location.pathname.startsWith('/draft/');
   const isGroupPage = location.pathname.startsWith('/groups/');
+  const isGroupsTab =
+    isGroupPage ||
+    (location.pathname === '/profile' && location.hash === '#groups-section');
 
   async function handleLogout() {
     await logOutUser();
     navigate('/login');
+  }
+
+  function handleGroupsNavigate() {
+    navigate('/profile#groups-section');
   }
 
   return (
@@ -48,21 +55,19 @@ export default function TopNav() {
 
         <button
           type="button"
-          className={isProfile ? 'secondary-btn' : 'ghost-btn'}
+          className={isProfile && !isGroupsTab ? 'secondary-btn' : 'ghost-btn'}
           onClick={() => navigate('/profile')}
         >
           Profile
         </button>
 
-        {isGroupPage ? (
-          <button
-            type="button"
-            className="secondary-btn"
-            onClick={() => navigate(location.pathname)}
-          >
-            Group
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className={isGroupsTab ? 'secondary-btn' : 'ghost-btn'}
+          onClick={handleGroupsNavigate}
+        >
+          Groups
+        </button>
 
         {isDraftPage ? (
           <button
@@ -71,6 +76,16 @@ export default function TopNav() {
             onClick={() => navigate(location.pathname)}
           >
             Draft
+          </button>
+        ) : null}
+
+        {isGroupPage ? (
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => navigate(location.pathname)}
+          >
+            Group
           </button>
         ) : null}
 
