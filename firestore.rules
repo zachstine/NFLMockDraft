@@ -16,7 +16,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /drafts/{draftId} {
+    match /mocks/{mockId} {
       allow create: if signedIn()
         && request.resource.data.ownerUid == request.auth.uid;
 
@@ -38,6 +38,11 @@ service cloud.firestore {
 
       allow delete: if signedIn()
         && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /draftClasses/{year}/players/{playerId} {
+      allow read: if signedIn();
+      allow write: if false;
     }
   }
 }

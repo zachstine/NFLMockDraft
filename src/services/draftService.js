@@ -12,11 +12,23 @@ import {
 import { db } from '../lib/firebase';
 import { samplePlayers } from '../data/samplePlayers';
 
-export async function createMockDraft({ ownerUid, username, selectedTeam, rounds, year }) {
+export async function createMockDraft({
+  ownerUid,
+  username,
+  selectedTeam,
+  selectedTeams = [],
+  rounds,
+  year,
+}) {
+  if (!ownerUid) {
+    throw new Error('Missing ownerUid for draft creation.');
+  }
+
   const mockRef = await addDoc(collection(db, 'mocks'), {
     ownerUid,
     username,
     selectedTeam,
+    selectedTeams,
     rounds,
     year,
     currentPickIndex: 0,
@@ -31,6 +43,7 @@ export async function createMockDraft({ ownerUid, username, selectedTeam, rounds
 
 export function listenToMockDraft(mockId, callback) {
   const mockRef = doc(db, 'mocks', mockId);
+
   return onSnapshot(mockRef, (snapshot) => {
     if (!snapshot.exists()) {
       callback(null);
@@ -67,6 +80,11 @@ export async function makeDraftPick(mockId, currentSlot, player, isAuto = false)
     }
 
     const mockData = mockSnap.data();
+
+    if (mockData.ownerUid !== auth?.currentUser?.uid) {
+      throw new Error('You do not have permission to modify this mock draft.');
+    }
+
     const picks = mockData.picks ?? [];
     const alreadyDrafted = new Set(picks.map((pick) => pick.playerId));
 
