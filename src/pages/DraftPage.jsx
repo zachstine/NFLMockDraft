@@ -124,17 +124,40 @@ export default function DraftPage() {
 
   const currentSlot = board[mockDraft?.currentPickIndex ?? 0] ?? null;
 
+  const userControlledTeams = useMemo(() => {
+    if (!mockDraft) return [];
+
+    if (mockDraft.selectedTeam === 'ALL') {
+      return NFL_TEAMS.map((team) => team.abbr);
+    }
+
+    if (Array.isArray(mockDraft.selectedTeams) && mockDraft.selectedTeams.length > 0) {
+      return mockDraft.selectedTeams;
+    }
+
+    if (mockDraft.selectedTeam && mockDraft.selectedTeam !== 'MULTI') {
+      return [mockDraft.selectedTeam];
+    }
+
+    return [];
+  }, [mockDraft]);
+
+  const isUserControlledPick = useMemo(() => {
+    if (!currentSlot) return false;
+    return userControlledTeams.includes(currentSlot.team);
+  }, [currentSlot, userControlledTeams]);
+
   const canUserPick = useMemo(() => {
     if (!mockDraft || !currentSlot) return false;
-    return mockDraft.selectedTeam === 'ALL' || mockDraft.selectedTeam === currentSlot.team;
-  }, [mockDraft, currentSlot]);
+    return isUserControlledPick;
+  }, [mockDraft, currentSlot, isUserControlledPick]);
 
   const cpuOnClock = useMemo(() => {
     if (!mockDraft || !currentSlot) return false;
     if (loadingPlayers) return false;
-    if (mockDraft.selectedTeam === 'ALL') return false;
-    return currentSlot.team !== mockDraft.selectedTeam;
-  }, [mockDraft, currentSlot, loadingPlayers]);
+    if (userControlledTeams.length === NFL_TEAMS.length) return false;
+    return !isUserControlledPick;
+  }, [mockDraft, currentSlot, loadingPlayers, userControlledTeams, isUserControlledPick]);
 
   async function handlePick(player, { isAuto = false } = {}) {
     if (!mockDraft || !currentSlot || !player) return;
@@ -155,7 +178,6 @@ export default function DraftPage() {
   useEffect(() => {
     if (!mockDraft || !currentSlot) return;
     if (loadingPlayers) return;
-    if (mockDraft.selectedTeam === 'ALL') return;
 
     const interval = setInterval(async () => {
       if (autoPickInFlightRef.current) return;
@@ -165,8 +187,17 @@ export default function DraftPage() {
       const latestSlot = board[latestCurrentIndex] ?? null;
       if (!latestSlot) return;
 
-      const isUserControlledPick = latestSlot.team === mockDraft.selectedTeam;
-      if (isUserControlledPick) return;
+      const latestUserControlledTeams =
+        mockDraft.selectedTeam === 'ALL'
+          ? NFL_TEAMS.map((team) => team.abbr)
+          : Array.isArray(mockDraft.selectedTeams) && mockDraft.selectedTeams.length > 0
+          ? mockDraft.selectedTeams
+          : mockDraft.selectedTeam && mockDraft.selectedTeam !== 'MULTI'
+          ? [mockDraft.selectedTeam]
+          : [];
+
+      const latestIsUserControlledPick = latestUserControlledTeams.includes(latestSlot.team);
+      if (latestIsUserControlledPick) return;
 
       const bestAvailable = allAvailablePlayers[0];
       if (!bestAvailable) return;
@@ -218,9 +249,9 @@ export default function DraftPage() {
         <div className="draft-top-banner panel">
           <div className="draft-top-banner-left">
             <div className="draft-top-banner-title">
-              {mockDraft.selectedTeam === 'ALL'
+              {userControlledTeams.length === NFL_TEAMS.length
                 ? 'User-controlled full draft'
-                : `${mockDraft.selectedTeam} user-controlled | CPU BPA for others`}
+                : `${userControlledTeams.length} user-controlled team${userControlledTeams.length === 1 ? '' : 's'} | CPU BPA for others`}
             </div>
           </div>
 
@@ -270,11 +301,16 @@ export default function DraftPage() {
 
                   <div className="inline-row">
                     {savingPick && <span className="subtle">Saving pick...</span>}
+                    {isUserControlledPick && currentSlot && (
+                      <span className="subtle">
+                        Your pick: {currentSlot.team}
+                      </span>
+                    )}
                     {cpuOnClock && (
                       <span className="subtle">
                         {cpuPickInFlight
-                          ? 'Auto-picking for CPU team...'
-                          : 'CPU team on the clock...'}
+                          ? `Auto-picking for ${currentSlot?.team}...`
+                          : `${currentSlot?.team} on the clock...`}
                       </span>
                     )}
                   </div>
