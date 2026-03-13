@@ -29,12 +29,6 @@ service cloud.firestore {
         && groupDoc(groupId).data.ownerUid == request.auth.uid;
     }
 
-    function sharesAnyGroupWithUser(targetUid) {
-      return signedIn() && exists(
-        /databases/$(database)/documents/groups/$(targetUid + "_" + request.auth.uid)
-      );
-    }
-
     function isJoiningGroup() {
       return signedIn()
         && request.resource.data.ownerUid == resource.data.ownerUid
@@ -49,22 +43,12 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow get: if isSelf(uid) || canReadUserProfile(uid);
+      allow get: if signedIn();
       allow list: if false;
 
       allow create: if isSelf(uid) && request.resource.data.uid == request.auth.uid;
       allow update: if isSelf(uid) && request.resource.data.uid == resource.data.uid;
       allow delete: if false;
-    }
-
-    function canReadUserProfile(targetUid) {
-      return signedIn() && exists(
-        /databases/$(database)/documents/groups_index/$(request.auth.uid + "_" + targetUid)
-      );
-    }
-
-    match /groups_index/{pairId} {
-      allow read, write: if false;
     }
 
     match /usernames/{username} {
