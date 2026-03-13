@@ -6,10 +6,6 @@ import { createMockDraft } from '../services/draftService';
 import { useAuth } from '../context/AuthContext';
 
 const ROUND_OPTIONS = ['1', '2', '3', '4', '5', '6', '7'];
-const CPU_SPEED_OPTIONS = [
-  { label: 'Fast', value: 1 },
-  { label: 'Normal', value: 3 },
-];
 
 const TEAM_DIVISIONS = [
   {
@@ -85,7 +81,7 @@ export default function HomePage() {
 
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [rounds, setRounds] = useState('');
-  const [cpuSpeedSeconds, setCpuSpeedSeconds] = useState(3);
+  const [cpuPickSpeedSeconds, setCpuPickSpeedSeconds] = useState(3);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
@@ -107,12 +103,8 @@ export default function HomePage() {
   }, [selectedTeams]);
 
   const cpuSpeedLabel = useMemo(() => {
-    const activeOption =
-      CPU_SPEED_OPTIONS.find((option) => option.value === cpuSpeedSeconds) ??
-      CPU_SPEED_OPTIONS[CPU_SPEED_OPTIONS.length - 1];
-
-    return `${activeOption.label} (${activeOption.value}s/pick)`;
-  }, [cpuSpeedSeconds]);
+    return cpuPickSpeedSeconds === 1 ? 'Fast (1s/pick)' : 'Normal (3s/pick)';
+  }, [cpuPickSpeedSeconds]);
 
   function toggleTeam(teamAbbr) {
     setSelectedTeams((prev) =>
@@ -285,42 +277,39 @@ export default function HomePage() {
 
             <div
               className="inline-row"
-              style={{ marginTop: '24px', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}
+              style={{ marginTop: '24px', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}
             >
               <div
-                className="panel"
                 style={{
-                  padding: '12px 16px',
-                  minWidth: '220px',
                   display: 'flex',
-                  flexDirection: 'column',
+                  alignItems: 'center',
                   gap: '8px',
                 }}
               >
-                <div className="stat-label">CPU Draft Speed</div>
-
-                <div
-                  className="inline-row"
-                  style={{ justifyContent: 'space-between', gap: '12px', margin: 0 }}
-                >
-                  <span className="subtle">Fast</span>
-                  <span className="subtle">Normal</span>
-                </div>
+                <span className="subtle" style={{ fontSize: '0.9rem' }}>
+                  Normal
+                </span>
 
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="1"
-                  value={cpuSpeedSeconds === 1 ? 0 : 1}
+                  value={cpuPickSpeedSeconds === 3 ? 0 : 1}
                   onChange={(event) =>
-                    setCpuSpeedSeconds(event.target.value === '0' ? 1 : 3)
+                    setCpuPickSpeedSeconds(event.target.value === '0' ? 3 : 1)
                   }
                   disabled={starting}
                   aria-label="CPU draft speed"
+                  style={{
+                    width: '68px',
+                    margin: 0,
+                  }}
                 />
 
-                <div className="subtle">{cpuSpeedLabel}</div>
+                <span className="subtle" style={{ fontSize: '0.9rem' }}>
+                  Fast
+                </span>
               </div>
 
               <button
