@@ -10,6 +10,18 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function isGroupMember(groupId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/groups/$(groupId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
+    }
+
+    function isGroupOwner(groupId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/groups/$(groupId)) &&
+        get(/databases/$(database)/documents/groups/$(groupId)).data.ownerUid == request.auth.uid;
+    }
+
     match /users/{userId} {
       allow read: if signedIn();
       allow create, update: if isSelf(userId);
@@ -38,6 +50,18 @@ service cloud.firestore {
 
       allow delete: if signedIn()
         && resource.data.ownerUid == request.auth.uid;
+
+      match /sharedMocks/{mockId} {
+        allow read: if isGroupMember(groupId);
+
+        allow create: if signedIn()
+          && request.resource.data.groupId == groupId
+          && request.resource.data.ownerUid == request.auth.uid
+          && isGroupMember(groupId);
+
+        allow update, delete: if signedIn()
+          && resource.data.ownerUid == request.auth.uid;
+      }
     }
 
     match /draftClasses/{year}/players/{playerId} {

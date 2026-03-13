@@ -6,7 +6,6 @@ import {
   getDoc,
   getDocs,
   query,
-  where,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import TopNav from '../components/TopNav';
@@ -70,6 +69,18 @@ function GroupStatCard({ label, value, sublabel }) {
   );
 }
 
+function getSharedDraftTitle(draft) {
+  if (draft.title?.trim()) return draft.title;
+  if (draft.selectedTeam === 'ALL') return 'Full Mock Draft';
+  if (Array.isArray(draft.selectedTeams) && draft.selectedTeams.length > 1) {
+    return `${draft.selectedTeams.length}-Team Mock Draft`;
+  }
+  if (draft.selectedTeam && draft.selectedTeam !== 'MULTI') {
+    return `${draft.selectedTeam} Mock Draft`;
+  }
+  return 'Untitled Draft';
+}
+
 export default function GroupPage() {
   const { groupId } = useParams();
   const { user, profile } = useAuth();
@@ -106,26 +117,21 @@ export default function GroupPage() {
         const groupData = { id: groupSnap.id, ...groupSnap.data() };
         setGroup(groupData);
 
-        const memberUids = Array.isArray(groupData.memberUids)
-          ? groupData.memberUids
-          : [];
+        const memberUids = Array.isArray(groupData.memberUids) ? groupData.memberUids : [];
 
         try {
-          const draftsSnap = await getDocs(
-            query(
-              collection(db, 'mocks'),
-              where('groupIds', 'array-contains', groupId)
-            )
+          const sharedDraftsSnap = await getDocs(
+            query(collection(db, 'groups', groupId, 'sharedMocks'))
           );
 
-          const draftRows = draftsSnap.docs.map((item) => ({
+          const sharedDraftRows = sharedDraftsSnap.docs.map((item) => ({
             id: item.id,
             ...item.data(),
           }));
 
-          setGroupDrafts(sortByNewest(draftRows, 'updatedAt'));
+          setGroupDrafts(sortByNewest(sharedDraftRows, 'updatedAt'));
         } catch (error) {
-          console.error('[group-page] shared mocks read failed', error);
+          console.error('[group-page] shared drafts read failed', error);
           setDraftsError(error?.message || 'Could not load shared drafts.');
           setGroupDrafts([]);
         }
@@ -261,15 +267,11 @@ export default function GroupPage() {
               <div className="selector-header">
                 <div>
                   <h1 style={{ marginBottom: '6px' }}>{group?.name || 'Group'}</h1>
-                  <div className="subtle">
-                    Created {formatDate(group?.createdAt)}
-                  </div>
+                  <div className="subtle">Created {formatDate(group?.createdAt)}</div>
                 </div>
 
                 <div className="inline-row">
-                  <span className="team-pill">
-                    Code: {group?.inviteCode || '—'}
-                  </span>
+                  <span className="team-pill">Code: {group?.inviteCode || '—'}</span>
                   {isOwner ? <span className="badge">Owner</span> : null}
                 </div>
               </div>
@@ -283,7 +285,7 @@ export default function GroupPage() {
                 <GroupStatCard
                   label="Shared Drafts"
                   value={groupDrafts.length}
-                  sublabel="Drafts attached to this group"
+                  sublabel="Drafts shared to this group"
                 />
                 <GroupStatCard
                   label="Owner"
@@ -303,7 +305,7 @@ export default function GroupPage() {
                 <div>
                   <h3 className="selector-title">Shared Drafts</h3>
                   <div className="subtle">
-                    Drafts shared with this group will appear here.
+                    Group-visible draft snapshots appear here.
                   </div>
                 </div>
               </div>
@@ -320,7 +322,7 @@ export default function GroupPage() {
                     <div key={draft.id} className="player-card">
                       <div className="pick-header">
                         <div style={{ display: 'grid', gap: '6px' }}>
-                          <h4>{draft.title || 'Untitled Draft'}</h4>
+                          <h4>{getSharedDraftTitle(draft)}</h4>
                           <div className="subtle">
                             By {draft.ownerUsername || 'Unknown GM'}
                           </div>
@@ -329,7 +331,9 @@ export default function GroupPage() {
                         <div className="inline-row">
                           <span className="badge">{draft.status || 'Saved'}</span>
                           <span className="team-pill">
-                            {draft.selectedTeam || '—'}
+                            {draft.selectedTeam === 'ALL'
+                              ? 'All 32 Teams'
+                              : draft.selectedTeam || '—'}
                           </span>
                         </div>
                       </div>
@@ -338,17 +342,11 @@ export default function GroupPage() {
                         <span className="badge">
                           Updated: {formatDateTime(draft.updatedAt || draft.createdAt)}
                         </span>
-                        <span className="badge">
-                          Rounds: {draft.rounds || 7}
-                        </span>
+                        <span className="badge">Rounds: {draft.rounds || 7}</span>
                       </div>
 
-                      <div className="player-actions">
-                        <div className="inline-row">
-                          <Link to={`/draft/${draft.id}`} className="selector-action">
-                            Open Draft
-                          </Link>
-                        </div>
+                      <div className="subtle" style={{ marginTop: '12px' }}>
+                        Picks made: {Array.isArray(draft.picks) ? draft.picks.length : draft.pickCount ?? 0}
                       </div>
                     </div>
                   ))}
