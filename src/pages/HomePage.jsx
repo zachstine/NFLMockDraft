@@ -87,6 +87,7 @@ export default function HomePage() {
 
   const allTeamsSelected = selectedTeams.length === NFL_TEAMS.length;
   const displayUsername = getDisplayUsername(profile, user);
+  const isFastSpeed = cpuPickSpeedSeconds === 1;
 
   const roundLabel = useMemo(() => {
     if (!rounds) return 'None';
@@ -118,6 +119,10 @@ export default function HomePage() {
     setSelectedTeams((prev) =>
       prev.length === NFL_TEAMS.length ? [] : NFL_TEAMS.map((team) => team.abbr)
     );
+  }
+
+  function handleToggleCpuSpeed() {
+    setCpuPickSpeedSeconds((prev) => (prev === 3 ? 1 : 3));
   }
 
   async function handleStartDraft() {
@@ -290,22 +295,37 @@ export default function HomePage() {
                   Normal
                 </span>
 
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="1"
-                  value={cpuPickSpeedSeconds === 3 ? 0 : 1}
-                  onChange={(event) =>
-                    setCpuPickSpeedSeconds(event.target.value === '0' ? 3 : 1)
-                  }
+                <button
+                  type="button"
+                  onClick={handleToggleCpuSpeed}
                   disabled={starting}
-                  aria-label="CPU draft speed"
+                  aria-label={`CPU draft speed toggle: ${isFastSpeed ? 'Fast' : 'Normal'}`}
+                  aria-pressed={isFastSpeed}
                   style={{
-                    width: '68px',
-                    margin: 0,
+                    width: '46px',
+                    height: '24px',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: isFastSpeed ? 'rgba(99, 102, 241, 0.85)' : 'rgba(255,255,255,0.12)',
+                    position: 'relative',
+                    cursor: starting ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    transition: 'background 0.2s ease',
                   }}
-                />
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: isFastSpeed ? '24px' : '2px',
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: '#fff',
+                      transition: 'left 0.2s ease',
+                    }}
+                  />
+                </button>
 
                 <span className="subtle" style={{ fontSize: '0.9rem' }}>
                   Fast
