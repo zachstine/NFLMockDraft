@@ -79,6 +79,7 @@ export default function GroupPage() {
   const [memberProfiles, setMemberProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState('');
+  const [draftsError, setDraftsError] = useState('');
 
   useEffect(() => {
     async function loadGroupPage() {
@@ -89,6 +90,10 @@ export default function GroupPage() {
 
       setLoading(true);
       setPageError('');
+      setDraftsError('');
+      setGroup(null);
+      setGroupDrafts([]);
+      setMemberProfiles([]);
 
       try {
         const groupRef = doc(db, 'groups', groupId);
@@ -105,41 +110,52 @@ export default function GroupPage() {
           ? groupData.memberUids
           : [];
 
-        const draftsSnap = await getDocs(
-          query(
-            collection(db, 'mocks'),
-            where('groupIds', 'array-contains', groupId)
-          )
-        );
-
-        const draftRows = draftsSnap.docs.map((item) => ({
-          id: item.id,
-          ...item.data(),
-        }));
-
-        setGroupDrafts(sortByNewest(draftRows, 'updatedAt'));
-
-        if (memberUids.length > 0) {
-          const memberDocs = await Promise.all(
-            memberUids.map(async (uid) => {
-              const userSnap = await getDoc(doc(db, 'users', uid));
-              if (!userSnap.exists()) {
-                return {
-                  id: uid,
-                  username: 'User',
-                  favoriteTeam: '',
-                  bio: '',
-                };
-              }
-
-              return {
-                id: userSnap.id,
-                ...userSnap.data(),
-              };
-            })
+        try {
+          const draftsSnap = await getDocs(
+            query(
+              collection(db, 'mocks'),
+              where('groupIds', 'array-contains', groupId)
+            )
           );
 
-          setMemberProfiles(memberDocs);
+          const draftRows = draftsSnap.docs.map((item) => ({
+            id: item.id,
+            ...item.data(),
+          }));
+
+          setGroupDrafts(sortByNewest(draftRows, 'updatedAt'));
+        } catch (error) {
+          console.error('[group-page] shared mocks read failed', error);
+          setDraftsError(error?.message || 'Could not load shared drafts.');
+          setGroupDrafts([]);
+        }
+
+        if (memberUids.length > 0) {
+          try {
+            const memberDocs = await Promise.all(
+              memberUids.map(async (uid) => {
+                const userSnap = await getDoc(doc(db, 'users', uid));
+                if (!userSnap.exists()) {
+                  return {
+                    id: uid,
+                    username: 'User',
+                    favoriteTeam: '',
+                    bio: '',
+                  };
+                }
+
+                return {
+                  id: userSnap.id,
+                  ...userSnap.data(),
+                };
+              })
+            );
+
+            setMemberProfiles(memberDocs);
+          } catch (error) {
+            console.error('[group-page] member profiles read failed', error);
+            setMemberProfiles([]);
+          }
         } else {
           setMemberProfiles([]);
         }
@@ -147,8 +163,6 @@ export default function GroupPage() {
         console.error('[group-page] failed to load group', error);
         setPageError(error?.message || 'Failed to load group.');
         setGroup(null);
-        setGroupDrafts([]);
-        setMemberProfiles([]);
       } finally {
         setLoading(false);
       }
@@ -294,7 +308,9 @@ export default function GroupPage() {
                 </div>
               </div>
 
-              {groupDrafts.length === 0 ? (
+              {draftsError ? (
+                <div className="empty-state">{draftsError}</div>
+              ) : groupDrafts.length === 0 ? (
                 <div className="empty-state">
                   No drafts have been shared to this group yet.
                 </div>
