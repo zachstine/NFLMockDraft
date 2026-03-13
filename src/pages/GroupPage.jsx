@@ -642,7 +642,7 @@ export default function GroupPage() {
                         {member.bio?.trim() ? member.bio : 'No bio added yet.'}
                       </div>
 
-                      {canRemoveMember(member) ? (
+                      {isOwner && member.id !== group?.ownerUid ? (
                         <div className="player-actions">
                           <div className="inline-row">
                             <button
