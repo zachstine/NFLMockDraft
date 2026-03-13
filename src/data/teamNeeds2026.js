@@ -119,8 +119,8 @@ export const TEAM_NEEDS_2026 = {
     low: ['K', 'P'],
   },
   NYG: {
-    high: ['QB', 'OT', 'CB'],
-    medium: ['WR', 'DT', 'LB'],
+    high: ['OT', 'CB'],
+    medium: ['QB','WR', 'DT', 'LB'],
     low: ['K', 'P'],
   },
   NYJ: {
