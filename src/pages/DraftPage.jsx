@@ -173,12 +173,9 @@ export default function DraftPage() {
   const remainingPicks = Math.max(totalPicks - completedPicksCount, 0);
   const isDraftCompleted = mockDraft?.status === 'completed';
 
-  const cpuPickSpeedSeconds =
-    mockDraft?.cpuPickSpeedSeconds === 1
-      ? 1
-      : 3;
-
+  const cpuPickSpeedSeconds = mockDraft?.cpuPickSpeedSeconds === 1 ? 1 : 3;
   const cpuPickDelayMs = cpuPickSpeedSeconds * 1000;
+  const cpuDraftMode = mockDraft?.cpuDraftMode === 'bpa' ? 'bpa' : 'logic';
 
   const currentSlot = isDraftCompleted
     ? null
@@ -400,13 +397,16 @@ export default function DraftPage() {
     const latestIsUserControlledPick = latestUserControlledTeams.includes(currentSlot.team);
     if (latestIsUserControlledPick) return;
 
-    const cpuPlayer = getBestCpuPick({
-      availablePlayers: allAvailablePlayers,
-      teamAbbr: currentSlot.team,
-      currentRound: currentSlot.round,
-      allPicks: mockDraft?.picks ?? [],
-      topN: 15,
-    });
+    const cpuPlayer =
+      cpuDraftMode === 'bpa'
+        ? allAvailablePlayers[0] ?? null
+        : getBestCpuPick({
+            availablePlayers: allAvailablePlayers,
+            teamAbbr: currentSlot.team,
+            currentRound: currentSlot.round,
+            allPicks: mockDraft?.picks ?? [],
+            topN: 15,
+          });
 
     if (!cpuPlayer) return;
 
@@ -439,6 +439,7 @@ export default function DraftPage() {
     isFinishing,
     mockId,
     cpuPickDelayMs,
+    cpuDraftMode,
   ]);
 
   if (!mockDraft) {
@@ -471,7 +472,7 @@ export default function DraftPage() {
                 ? 'User-controlled full draft'
                 : `${userControlledTeams.length} user-controlled team${
                     userControlledTeams.length === 1 ? '' : 's'
-                  } | CPU BPA for others`}
+                  } | CPU ${cpuDraftMode === 'bpa' ? 'Pure BPA' : 'Draft Logic'} for others`}
             </div>
           </div>
 
@@ -480,6 +481,7 @@ export default function DraftPage() {
             <span className="badge">Remaining: {remainingPicks}</span>
             <span className="badge">Rounds: {mockDraft.rounds}</span>
             <span className="badge">CPU Speed: {cpuPickSpeedSeconds}s</span>
+            <span className="badge">CPU Mode: {cpuDraftMode === 'bpa' ? 'Pure BPA' : 'Draft Logic'}</span>
             <button
               type="button"
               className="primary-button"
@@ -545,7 +547,7 @@ export default function DraftPage() {
                       <span className="subtle">
                         {cpuPickInFlight
                           ? `Auto-picking for ${currentSlot?.team}...`
-                          : `${currentSlot?.team} on the clock... (${cpuPickSpeedSeconds}s)`}
+                          : `${currentSlot?.team} on the clock... (${cpuPickSpeedSeconds}s | ${cpuDraftMode === 'bpa' ? 'Pure BPA' : 'Draft Logic'})`}
                       </span>
                     )}
                   </div>

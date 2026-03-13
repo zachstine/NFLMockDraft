@@ -22,12 +22,14 @@ export async function createMockDraft({
   rounds,
   year,
   cpuPickSpeedSeconds = 3,
+  cpuDraftMode = 'logic',
 }) {
   if (!ownerUid) {
     throw new Error('Missing ownerUid for draft creation.');
   }
 
   const normalizedCpuPickSpeedSeconds = cpuPickSpeedSeconds === 1 ? 1 : 3;
+  const normalizedCpuDraftMode = cpuDraftMode === 'bpa' ? 'bpa' : 'logic';
 
   const mockRef = await addDoc(collection(db, 'mocks'), {
     ownerUid,
@@ -37,6 +39,7 @@ export async function createMockDraft({
     rounds,
     year,
     cpuPickSpeedSeconds: normalizedCpuPickSpeedSeconds,
+    cpuDraftMode: normalizedCpuDraftMode,
     currentPickIndex: 0,
     status: 'active',
     picks: [],

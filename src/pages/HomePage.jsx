@@ -82,12 +82,14 @@ export default function HomePage() {
   const [selectedTeams, setSelectedTeams] = useState([]);
   const [rounds, setRounds] = useState('');
   const [cpuPickSpeedSeconds, setCpuPickSpeedSeconds] = useState(3);
+  const [cpuDraftMode, setCpuDraftMode] = useState('logic');
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
 
   const allTeamsSelected = selectedTeams.length === NFL_TEAMS.length;
   const displayUsername = getDisplayUsername(profile, user);
   const isFastSpeed = cpuPickSpeedSeconds === 1;
+  const isDraftLogicMode = cpuDraftMode === 'logic';
 
   const roundLabel = useMemo(() => {
     if (!rounds) return 'None';
@@ -107,6 +109,10 @@ export default function HomePage() {
     return cpuPickSpeedSeconds === 1 ? 'Fast (1s/pick)' : 'Normal (3s/pick)';
   }, [cpuPickSpeedSeconds]);
 
+  const cpuDraftModeLabel = useMemo(() => {
+    return cpuDraftMode === 'bpa' ? 'Pure BPA' : 'Draft Logic';
+  }, [cpuDraftMode]);
+
   function toggleTeam(teamAbbr) {
     setSelectedTeams((prev) =>
       prev.includes(teamAbbr)
@@ -123,6 +129,10 @@ export default function HomePage() {
 
   function handleToggleCpuSpeed() {
     setCpuPickSpeedSeconds((prev) => (prev === 3 ? 1 : 3));
+  }
+
+  function handleToggleCpuDraftMode() {
+    setCpuDraftMode((prev) => (prev === 'logic' ? 'bpa' : 'logic'));
   }
 
   async function handleStartDraft() {
@@ -155,6 +165,7 @@ export default function HomePage() {
         rounds: rounds === 'ALL' ? 7 : Number(rounds),
         year: '2026',
         cpuPickSpeedSeconds,
+        cpuDraftMode,
       };
 
       console.log('[home-page] createMockDraft payload', payload);
@@ -332,6 +343,54 @@ export default function HomePage() {
                 </span>
               </div>
 
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span className="subtle" style={{ fontSize: '0.9rem' }}>
+                  Pure BPA
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleToggleCpuDraftMode}
+                  disabled={starting}
+                  aria-label={`CPU draft mode toggle: ${isDraftLogicMode ? 'Draft Logic' : 'Pure BPA'}`}
+                  aria-pressed={isDraftLogicMode}
+                  style={{
+                    width: '46px',
+                    height: '24px',
+                    borderRadius: '999px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: isDraftLogicMode ? 'rgba(34, 197, 94, 0.85)' : 'rgba(255,255,255,0.12)',
+                    position: 'relative',
+                    cursor: starting ? 'not-allowed' : 'pointer',
+                    padding: 0,
+                    transition: 'background 0.2s ease',
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: isDraftLogicMode ? '24px' : '2px',
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: '#fff',
+                      transition: 'left 0.2s ease',
+                    }}
+                  />
+                </button>
+
+                <span className="subtle" style={{ fontSize: '0.9rem' }}>
+                  Draft Logic
+                </span>
+              </div>
+
               <button
                 type="button"
                 className="primary-btn"
@@ -364,6 +423,11 @@ export default function HomePage() {
               <div className="stat-card">
                 <div className="stat-label">CPU speed</div>
                 <div className="stat-value">{cpuSpeedLabel}</div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-label">CPU mode</div>
+                <div className="stat-value">{cpuDraftModeLabel}</div>
               </div>
             </div>
           </div>
