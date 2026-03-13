@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import TopNav from '../components/TopNav';
 import DraftBoard from '../components/DraftBoard';
 import PlayerList from '../components/PlayerList';
@@ -485,7 +485,50 @@ export default function DraftPage() {
       setError('');
 
       try {
-        await makeDraftPick(mockId, currentSlot, cpuPlayer, true);
+        const liveMockSnap = await getDoc(doc(db, 'mocks', mockId));
+        if (!liveMockSnap.exists()) {
+          throw new Error('Mock draft not found.');
+        }
+
+        const liveMock = liveMockSnap.data();
+        if (liveMock.status === 'completed') return;
+
+        const liveBoard = buildDraftBoard(liveMock.rounds);
+        const liveCurrentIndex = liveMock.currentPickIndex ?? 0;
+        const liveSlot = liveBoard[liveCurrentIndex] ?? null;
+
+        if (!liveSlot) return;
+
+        const liveUserControlledTeams =
+          liveMock.selectedTeam === 'ALL'
+            ? NFL_TEAMS.map((team) => team.abbr)
+            : Array.isArray(liveMock.selectedTeams) && liveMock.selectedTeams.length > 0
+            ? liveMock.selectedTeams
+            : liveMock.selectedTeam && liveMock.selectedTeam !== 'MULTI'
+            ? [liveMock.selectedTeam]
+            : [];
+
+        if (liveUserControlledTeams.includes(liveSlot.team)) return;
+
+        const liveDraftedIds = new Set((liveMock.picks ?? []).map((pick) => pick.playerId));
+        const liveAvailablePlayers = players
+          .filter((player) => !liveDraftedIds.has(player.id))
+          .sort((a, b) => a.overallRank - b.overallRank);
+
+        const liveCpuPlayer =
+          cpuDraftMode === 'bpa'
+            ? liveAvailablePlayers[0] ?? null
+            : getBestCpuPick({
+                availablePlayers: liveAvailablePlayers,
+                teamAbbr: liveSlot.team,
+                currentRound: liveSlot.round,
+                allPicks: liveMock.picks ?? [],
+                topN: 15,
+              });
+
+        if (!liveCpuPlayer) return;
+
+        await makeDraftPick(mockId, liveSlot, liveCpuPlayer, true);
       } catch (pickError) {
         setError(pickError.message || 'Could not auto-pick.');
       } finally {
@@ -506,6 +549,7 @@ export default function DraftPage() {
     mockId,
     cpuPickDelayMs,
     cpuDraftMode,
+    players,
   ]);
 
   const positionOptions = POSITION_ORDER.filter(
