@@ -8,6 +8,26 @@ export default function PlayerList({
   upcomingPicks = [],
   nextUpcomingPick = null,
 }) {
+  function getPhysicalInfo(player) {
+    const parts = [];
+
+    if (player.height) {
+      parts.push(player.height);
+    }
+
+    if (player.weight) {
+      const weightValue =
+        typeof player.weight === 'number' ? `${player.weight} lbs` : player.weight;
+      parts.push(weightValue);
+    }
+
+    if (player.classYear) {
+      parts.push(player.classYear);
+    }
+
+    return parts.join(' • ');
+  }
+
   return (
     <div className="panel scroll-panel">
       <div className="toolbar-top">
@@ -54,30 +74,39 @@ export default function PlayerList({
         <div className="empty-state">No available players match the current filters.</div>
       ) : (
         <div className="player-list">
-          {players.map((player) => (
-            <div className="player-card" key={player.id}>
-              <div className="player-meta">
-                <div>
-                  <h4>{player.fullName}</h4>
-                  <div className="subtle">{player.school}</div>
-                </div>
-                <div className="inline-row">
-                  <span className="position-pill">{player.position}</span>
-                  <span className="badge">Rank #{player.overallRank}</span>
-                </div>
-              </div>
+          {players.map((player) => {
+            const physicalInfo = getPhysicalInfo(player);
 
-              <div className="player-actions">
-                <button
-                  className="primary-btn"
-                  disabled={!canUserPick || !currentSlot}
-                  onClick={() => onPick(player)}
-                >
-                  Draft Player
-                </button>
+            return (
+              <div className="player-card" key={player.id}>
+                <div className="player-meta">
+                  <div>
+                    <h4>{player.fullName}</h4>
+                    <div className="subtle">{player.school}</div>
+                    {physicalInfo ? (
+                      <div className="subtle" style={{ marginTop: '4px' }}>
+                        {physicalInfo}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="inline-row">
+                    <span className="position-pill">{player.position}</span>
+                    <span className="badge">Rank #{player.overallRank}</span>
+                  </div>
+                </div>
+
+                <div className="player-actions">
+                  <button
+                    className="primary-btn"
+                    disabled={!canUserPick || !currentSlot}
+                    onClick={() => onPick(player)}
+                  >
+                    Draft Player
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
