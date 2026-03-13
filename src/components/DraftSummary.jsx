@@ -14,21 +14,28 @@ function getTeamMeta(teamAbbr) {
 function getPlayerName(pick) {
   return (
     pick?.player?.name ||
+    pick?.player?.fullName ||
     pick?.playerName ||
+    pick?.fullName ||
     pick?.name ||
     'Unknown Player'
   );
 }
 
 function getPlayerPosition(pick) {
-  return (
+  const rawPosition =
     pick?.player?.position ||
     pick?.playerPosition ||
     pick?.position ||
     pick?.player?.pos ||
     pick?.pos ||
-    '—'
-  );
+    pick?.player?.primaryPosition ||
+    pick?.primaryPosition ||
+    pick?.player?.listedPosition ||
+    pick?.listedPosition ||
+    '';
+
+  return rawPosition ? String(rawPosition).trim().toUpperCase() : '—';
 }
 
 function getPlayerSchool(pick) {
@@ -76,9 +83,12 @@ function buildRoundBuckets(picks) {
   const map = new Map();
 
   for (const pick of picks) {
-    const round = Number(getRound(pick));
-    if (!map.has(round)) map.set(round, []);
-    map.get(round).push(pick);
+    const rawRound = getRound(pick);
+    const round = Number(rawRound);
+    const safeRound = Number.isFinite(round) ? round : 999;
+
+    if (!map.has(safeRound)) map.set(safeRound, []);
+    map.get(safeRound).push(pick);
   }
 
   return Array.from(map.entries())
