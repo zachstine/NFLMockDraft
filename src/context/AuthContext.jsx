@@ -15,9 +15,14 @@ export function AuthProvider({ children }) {
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const snapshot = await getDoc(userRef);
-        setProfile(snapshot.exists() ? snapshot.data() : null);
+        try {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const snapshot = await getDoc(userRef);
+          setProfile(snapshot.exists() ? snapshot.data() : null);
+        } catch (error) {
+          console.error('[auth-context] failed to load profile', error);
+          setProfile(null);
+        }
       } else {
         setProfile(null);
       }
