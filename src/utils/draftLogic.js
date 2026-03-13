@@ -1,4 +1,4 @@
-import { TEAM_NEEDS_2026 } from '../data/teamNeeds2026';
+import { TEAM_NEEDS_2026 } from '../data/teamNeeds2026.js';
 
 const POSITION_GROUP_MAP = {
   QB: 'QB',
